@@ -25,6 +25,8 @@ jobs:
           export PATH="$THEOS/bin:$PATH"
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           echo "$THEOS/bin" >> $GITHUB_PATH
+          brew install ldid >/dev/null 2>&1 || true
+          which ldid || echo 'ldid missing'
 
       - name: Build app and tunnel extension
         run: |
