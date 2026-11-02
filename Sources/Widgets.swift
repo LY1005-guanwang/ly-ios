@@ -22,7 +22,7 @@ final class RingView: UIView {
     private let track = CAShapeLayer()
     private let prog = CAShapeLayer()
     private let grad = CAGradientLayer()
-    private let center = UILabel()
+    private let valLB = UILabel()
     private let caption = UILabel()
 
     override init(frame: CGRect) {
@@ -49,11 +49,11 @@ final class RingView: UIView {
         grad.endPoint = CGPoint(x: 1, y: 1)
         layer.addSublayer(grad)
 
-        center.font = .monospacedDigitSystemFont(ofSize: 26, weight: .semibold)
-        center.textColor = LyTheme.ink
-        center.textAlignment = .center
-        center.text = "—"
-        addSubview(center)
+        valLB.font = .monospacedDigitSystemFont(ofSize: 26, weight: .semibold)
+        valLB.textColor = LyTheme.ink
+        valLB.textAlignment = .center
+        valLB.text = "—"
+        addSubview(valLB)
 
         caption.font = .systemFont(ofSize: 11, weight: .medium)
         caption.textColor = LyTheme.ink3
@@ -74,7 +74,7 @@ final class RingView: UIView {
         prog.frame = bounds
         grad.frame = bounds
         grad.mask = prog
-        center.frame = CGRect(x: 0, y: bounds.midY - 24, width: bounds.width, height: 30)
+        valLB.frame = CGRect(x: 0, y: bounds.midY - 24, width: bounds.width, height: 30)
         caption.frame = CGRect(x: 0, y: bounds.midY + 6, width: bounds.width, height: 16)
     }
 
@@ -84,8 +84,8 @@ final class RingView: UIView {
         CATransaction.setAnimationDuration(0.45)
         prog.strokeEnd = r
         CATransaction.commit()
-        center.text = text
-        center.textColor = r <= 0.001 ? LyTheme.danger : LyTheme.ink
+        valLB.text = text
+        valLB.textColor = r <= 0.001 ? LyTheme.danger : LyTheme.ink
         caption.text = sub
     }
 }
