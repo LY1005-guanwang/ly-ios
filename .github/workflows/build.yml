@@ -25,14 +25,13 @@ jobs:
           export PATH="$THEOS/bin:$PATH"
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           echo "$THEOS/bin" >> $GITHUB_PATH
-          (brew install ldid >/dev/null 2>&1 || true)
 
       - name: Build app and tunnel extension
         run: |
           make clean all -j4 2>&1 | tail -40
           ( cd tunnel && make clean all -j4 2>&1 | tail -20 ) || true
 
-      - name: Assemble Payload IPA
+      - name: Assemble unsigned Payload IPA
         run: |
           APP=$(find . -maxdepth 6 -type d -name "LyInternal.app" | head -1)
           APPEX=$(find . -maxdepth 6 -type d -name "LyTunnel.appex" | head -1)
@@ -44,47 +43,38 @@ jobs:
           mkdir -p Payload/LyInternal.app/PlugIns
           if [ -n "$APPEX" ]; then cp -R "$APPEX" Payload/LyInternal.app/PlugIns/; fi
           if [ -f Resources/ly_pub.pem ]; then cp Resources/ly_pub.pem Payload/LyInternal.app/; fi
-          if command -v ldid >/dev/null 2>&1; then
-            ldid -Sly_internal.entitlements "Payload/LyInternal.app/LyInternal" || true
-            if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then
-              ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
-            fi
-          fi
-          codesign --force --sign - "Payload/LyInternal.app" 2>/dev/null || true
+          # 清理可能残留的签名，交给安装工具去签
+          rm -rf Payload/LyInternal.app/_CodeSignature Payload/LyInternal.app/CodeResources 2>/dev/null || true
+          rm -rf Payload/LyInternal.app/PlugIns/LyTunnel.appex/_CodeSignature 2>/dev/null || true
           chmod 755 "Payload/LyInternal.app/LyInternal"
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
-      - name: Publish IPA as base64 chunks
+      - name: Publish IPA
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PY'
-          import base64, json, os, urllib.request, urllib.error
+          import base64, json, os, urllib.request
           repo = os.environ['GITHUB_REPOSITORY']
           token = os.environ['GITHUB_TOKEN']
           raw = open('LyInternal.ipa','rb').read()
           data = base64.b64encode(raw).decode()
-          CH = 900000
-          parts = [data[i:i+CH] for i in range(0, len(data), CH)]
+          path = 'dist/ipa.b64'
+          url = 'https://api.github.com/repos/%s/contents/%s' % (repo, path)
           hdr = {'Authorization': 'Bearer %s' % token,
                  'Accept': 'application/vnd.github+json',
                  'User-Agent': 'ly-builder',
                  'Content-Type': 'application/json'}
-          def put(path, content, msg):
-              url = 'https://api.github.com/repos/%s/contents/%s' % (repo, path)
+          sha = None
+          try:
+              req = urllib.request.Request(url, headers=hdr)
+              sha = json.load(urllib.request.urlopen(req, timeout=30))['sha']
+          except Exception:
               sha = None
-              try:
-                  req = urllib.request.Request(url, headers=hdr)
-                  sha = json.load(urllib.request.urlopen(req, timeout=30))['sha']
-              except Exception:
-                  sha = None
-              p = {'message': msg, 'content': content}
-              if sha: p['sha'] = sha
-              req = urllib.request.Request(url, data=json.dumps(p).encode(), method='PUT', headers=hdr)
-              urllib.request.urlopen(req, timeout=120).read()
-          for i, chunk in enumerate(parts):
-              put('dist/part-%02d.b64' % i, chunk, 'chunk %d' % i)
-          put('dist/manifest.txt', base64.b64encode(str(len(parts)).encode()).decode(), 'manifest')
-          print('ipa=%d bytes, chunks=%d' % (len(raw), len(parts)))
+          p = {'message': 'publish unsigned ipa', 'content': data}
+          if sha: p['sha'] = sha
+          req = urllib.request.Request(url, data=json.dumps(p).encode(), method='PUT', headers=hdr)
+          urllib.request.urlopen(req, timeout=180).read()
+          print('published ipa bytes=%d' % len(raw))
           PY
