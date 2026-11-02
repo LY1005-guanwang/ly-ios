@@ -32,9 +32,9 @@ jobs:
         run: |
           set -e
           make clean all -j4 2>&1 | tail -60
-          echo '--- 缂栬瘧闅ч亾鎵╁睍 ---'
+          echo '--- 缂傛牞鐦ч梾褔浜鹃幍鈺佺潔 ---'
           ( cd tunnel && make clean all -j4 2>&1 | tail -30 ) || echo 'extension build failed (non-fatal)'
-          echo '--- 浜х墿 ---'
+          echo '--- 娴溠呭⒖ ---'
           find .theos -name '*.app' -o -name '*.appex' 2>/dev/null | head -20
           find .theos -name "*.app" -o -name "*.appex" | head -20
 
@@ -56,11 +56,11 @@ jobs:
           fi
           chmod 755 Payload/LyInternal.app/LyInternal
           strip -x "Payload/LyInternal.app/LyInternal" || true
-          [ -n "$APPEX" ] && strip -x "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
+          if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then strip -x "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" 2>/dev/null || true; fi
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
-      # 鎶?ipa 浠?base64 鍒嗙墖鎻愪氦鍥炰粨搴擄紙杩欐牱鍙渶 api.github.com 灏辫兘鍙栵紝缁曞紑琚鐨?artifact 涓嬭浇鍩燂級
+      # 閹?ipa 娴?base64 閸掑棛澧栭幓鎰唉閸ョ偘绮ㄦ惔鎿勭礄鏉╂瑦鐗遍崣顏堟付 api.github.com 鐏忚精鍏橀崣鏍电礉缂佹洖绱戠悮顐㈩暰閻?artifact 娑撳娴囬崺鐕傜礆
       - name: Publish IPA as base64 chunks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
