@@ -1,33 +1,28 @@
 //
 //  AntiDebug.swift — 反调试 / 反注入（不影响 TrollStore 安装）
-//  注意：**不做越狱检测**，否则巨魔装不上；只挡调试器与 Frida 注入。
+//  只用三种手段：ptrace(PT_DENY_ATTACH) / DYLD 环境变量 / Frida 端口
 //
 
 import Foundation
 import Darwin
 
+@_silgen_name("ptrace")
+private func ly_ptrace(_ request: Int32, _ pid: Int32,
+                       _ addr: UnsafeMutableRawPointer?, _ data: Int32) -> Int32
+
 enum AntiDebug {
 
-    /// 进程是否被调试（P_TRACED）或存在注入特征
+    private static let PT_DENY_ATTACH: Int32 = 31
+
     static var isCompromised: Bool {
-        return traced() || fridaPort() || suspiciousEnv()
+        return fridaPort() || suspiciousEnv()
     }
 
-    /// ptrace(PT_DENY_ATTACH)：让 lldb / frida 附加失败
+    /// 禁止调试器附加（lldb / frida 会 attach 失败）
     static func denyAttach() {
-        _ = ptrace(PT_DENY_ATTACH, 0, nil, 0)
+        _ = ly_ptrace(PT_DENY_ATTACH, 0, nil, 0)
     }
 
-    private static func traced() -> Bool {
-        var info = kinfo_proc()
-        var size = MemoryLayout<kinfo_proc>.stride
-        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
-        let r = sysctl(&mib, u_int(mib.count), &info, &size, nil, 0)
-        guard r == 0 else { return false }
-        return (info.kp_proc.p_flag & P_TRACED) != 0
-    }
-
-    /// Frida 默认监听 27042；顺带看 27043
     private static func fridaPort() -> Bool {
         for port in [27042, 27043] {
             let fd = socket(AF_INET, SOCK_STREAM, 0)
@@ -38,7 +33,7 @@ enum AntiDebug {
             addr.sin_port = UInt16(port).bigEndian
             addr.sin_addr.s_addr = inet_addr("127.0.0.1")
             var tv = timeval(tv_sec: 0, tv_usec: 200_000)
-            setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+            _ = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
             let r = withUnsafePointer(to: &addr) {
                 $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                     connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
