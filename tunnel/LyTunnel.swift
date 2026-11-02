@@ -17,7 +17,7 @@ final class LyTunnelProvider: NEPacketTunnelProvider {
     private var blockedCount = 0
     private var totalCount = 0
 
-    override func startTunnel(options: [String: Any]?,
+    override func startTunnel(options: [String: NSObject]?,
                              completionHandler: @escaping (Error?) -> Void) {
         loadRules()
         let s = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: "10.7.0.1")
