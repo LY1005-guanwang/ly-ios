@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
-    <key>CFBundleDisplayName</key><string>LY内部</string>
+    <key>CFBundleDisplayName</key><string>LY鍐呴儴</string>
     <key>CFBundleExecutable</key><string>LyInternal</string>
     <key>CFBundleIdentifier</key><string>com.ly.neizhi.ios</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
@@ -12,8 +12,17 @@
     <key>CFBundleShortVersionString</key><string>3.9</string>
     <key>CFBundleVersion</key><string>39</string>
     <key>MinimumOSVersion</key><string>14.0</string>
+    <key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconFiles</key>
+            <array><string>AppIcon60x60</string></array>
+            <key>CFBundleIconName</key><string>AppIcon</string>
+        </dict>
+    </dict>
     <key>CFBundleIconFiles</key>
-    <array><string>AppIcon60x60</string></array>
+    <array><string>Icon-60</string><string>Icon-60@2x</string><string>Icon-60@3x</string></array>
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key><string>LaunchBG</string>
@@ -24,6 +33,6 @@
     <key>UIRequiredDeviceCapabilities</key>
     <array><string>arm64</string></array>
     <key>LSRequiresIPhoneOS</key><true/>
-    <key>NSFaceIDUsageDescription</key><string>用于保护本地登录凭证</string>
+    <key>NSFaceIDUsageDescription</key><string>鐢ㄤ簬淇濇姢鏈湴鐧诲綍鍑瘉</string>
 </dict>
 </plist>
