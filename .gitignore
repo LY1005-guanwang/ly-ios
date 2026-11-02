@@ -1,0 +1,6 @@
+﻿# 排除本地产物
+*.ipa
+*.zip
+Payload/
+.theos/
+*.log
