@@ -56,6 +56,8 @@ jobs:
 
       # 把 ipa 以 base64 分片提交回仓库（这样只需 api.github.com 就能取，绕开被墙的 artifact 下载域）
       - name: Publish IPA as base64 chunks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           SIZE=$(stat -f%z LyInternal.ipa)
