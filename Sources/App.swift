@@ -1,6 +1,6 @@
 //
-//  App.swift — LY内部 iOS · 全新「液态玻璃 · 白色调」UI
-//  iOS 14+ / UIKit 纯代码 / 无 Storyboard
+//  App.swift 鈥?LY鍐呴儴 iOS 路 鍏ㄦ柊銆屾恫鎬佺幓鐠?路 鐧借壊璋冦€峌I
+//  iOS 14+ / UIKit 绾唬鐮?/ 鏃?Storyboard
 //
 
 import UIKit
@@ -10,6 +10,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     func application(_ app: UIApplication,
                      didFinishLaunchingWithOptions opt: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        AntiDebug.denyAttach()          // 加固：ptrace(PT_DENY_ATTACH) 阻止调试器附加
         let w = UIWindow(frame: UIScreen.main.bounds)
         w.rootViewController = LyHomeViewController()
         w.makeKeyAndVisible()
@@ -18,7 +19,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-// MARK: - 玻璃卡片
+// MARK: - 鐜荤拑鍗＄墖
 
 final class GlassCard: UIView {
     private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialLight))
@@ -60,12 +61,10 @@ final class GlassCard: UIView {
     }
 }
 
-// MARK: - 主界面
-
+// MARK: - 涓荤晫闈?
 final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
 
-    // 主题色（白调 + 墨绿点缀）
-    private let ink    = UIColor(red: 0.09, green: 0.10, blue: 0.11, alpha: 1)
+    // 涓婚鑹诧紙鐧借皟 + 澧ㄧ豢鐐圭紑锛?    private let ink    = UIColor(red: 0.09, green: 0.10, blue: 0.11, alpha: 1)
     private let teal   = UIColor(red: 0.18, green: 0.44, blue: 0.40, alpha: 1)
     private let danger = UIColor(red: 0.72, green: 0.24, blue: 0.24, alpha: 1)
 
@@ -88,27 +87,27 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
     private let passTF  = UITextField()
     private let cardTF  = UITextField()
 
-    private let btnLogin  = LyButton(title: "登录", style: .primary)
-    private let btnReg    = LyButton(title: "注册（需卡密）", style: .ghost)
-    private let btnRenew  = LyButton(title: "用卡密续期", style: .primary)
-    private let btnLogout = LyButton(title: "退出登录 / 切换账号", style: .ghost)
+    private let btnLogin  = LyButton(title: "鐧诲綍", style: .primary)
+    private let btnReg    = LyButton(title: "娉ㄥ唽锛堥渶鍗″瘑锛?, style: .ghost)
+    private let btnRenew  = LyButton(title: "鐢ㄥ崱瀵嗙画鏈?, style: .primary)
+    private let btnLogout = LyButton(title: "閫€鍑虹櫥褰?/ 鍒囨崲璐﹀彿", style: .ghost)
 
     private let ruleCard = GlassCard()
     private let ruleLB   = UILabel()
-    private let btnRules = LyButton(title: "拉取云端规则", style: .ghost)
+    private let btnRules = LyButton(title: "鎷夊彇浜戠瑙勫垯", style: .ghost)
 
-    private let btnVPN   = LyButton(title: "开启网络拦截", style: .primary)
+    private let btnVPN   = LyButton(title: "寮€鍚綉缁滄嫤鎴?, style: .primary)
     private let tipLB    = UILabel()
 
     private var busy = false
 
-    // MARK: 生命周期
+    // MARK: 鐢熷懡鍛ㄦ湡
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(white: 0.975, alpha: 1)
 
-        // 背景光晕（液态玻璃质感）
+        // 鑳屾櫙鍏夋檿锛堟恫鎬佺幓鐠冭川鎰燂級
         let g1 = CAGradientLayer()
         g1.colors = [UIColor(red: 0.86, green: 0.93, blue: 0.92, alpha: 1).cgColor,
                      UIColor(white: 1, alpha: 0).cgColor]
@@ -138,7 +137,7 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         scroll.contentSize = CGSize(width: view.bounds.width, height: stack.frame.height + 60)
     }
 
-    // MARK: 构建
+    // MARK: 鏋勫缓
 
     private func buildUI() {
         scroll.delegate = self
@@ -164,20 +163,19 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         heroImg.alpha = 0.92
         hero.addSubview(heroImg)
 
-        titleLB.text = "LY 内部"
+        titleLB.text = "LY 鍐呴儴"
         titleLB.font = .systemFont(ofSize: 34, weight: .semibold)
         titleLB.textColor = ink
         titleLB.textAlignment = .center
         hero.addSubview(titleLB)
 
-        subLB.text = "网 络 层 · 静 默 拦 截"
+        subLB.text = "缃?缁?灞?路 闈?榛?鎷?鎴?
         subLB.font = .systemFont(ofSize: 13, weight: .regular)
         subLB.textColor = UIColor(white: 0.45, alpha: 1)
         subLB.textAlignment = .center
         hero.addSubview(subLB)
 
-        // ---- 状态
-        stack.addArrangedSubview(statusCard)
+        // ---- 鐘舵€?        stack.addArrangedSubview(statusCard)
         statusCard.translatesAutoresizingMaskIntoConstraints = false
         statusCard.heightAnchor.constraint(equalToConstant: 124).isActive = true
         remainLB.font = .systemFont(ofSize: 26, weight: .semibold)
@@ -189,8 +187,7 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         sStack.spacing = 6
         statusCard.addSubview(sStack)
 
-        // 进度环（右侧）
-        statusCard.addSubview(ring)
+        // 杩涘害鐜紙鍙充晶锛?        statusCard.addSubview(ring)
         ring.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             ring.trailingAnchor.constraint(equalTo: statusCard.trailingAnchor, constant: -16),
@@ -198,15 +195,14 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
             ring.widthAnchor.constraint(equalToConstant: 92),
             ring.heightAnchor.constraint(equalToConstant: 92)
         ])
-        // 文本区右侧留出空间
-        sStack.trailingAnchor.constraint(lessThanOrEqualTo: ring.leadingAnchor, constant: -12).isActive = true
+        // 鏂囨湰鍖哄彸渚х暀鍑虹┖闂?        sStack.trailingAnchor.constraint(lessThanOrEqualTo: ring.leadingAnchor, constant: -12).isActive = true
 
-        // ---- 账号
+        // ---- 璐﹀彿
         stack.addArrangedSubview(accountCard)
-        userTF.placeholder = "账号"
-        passTF.placeholder = "密码"
+        userTF.placeholder = "璐﹀彿"
+        passTF.placeholder = "瀵嗙爜"
         passTF.isSecureTextEntry = true
-        cardTF.placeholder = "卡密（注册 / 续期用）"
+        cardTF.placeholder = "鍗″瘑锛堟敞鍐?/ 缁湡鐢級"
         cardTF.autocapitalizationType = .none
         [userTF, passTF, cardTF].forEach {
             $0.font = .systemFont(ofSize: 16)
@@ -228,19 +224,19 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         btnRenew.addTarget(self, action: #selector(onRenew), for: .touchUpInside)
         btnLogout.addTarget(self, action: #selector(onLogout), for: .touchUpInside)
 
-        // ---- 规则
+        // ---- 瑙勫垯
         stack.addArrangedSubview(ruleCard)
         ruleLB.numberOfLines = 0
         ruleLB.font = .systemFont(ofSize: 13)
         ruleLB.textColor = UIColor(white: 0.32, alpha: 1)
-        ruleLB.text = "规则状态\n尚未同步"
+        ruleLB.text = "瑙勫垯鐘舵€乗n灏氭湭鍚屾"
         let rStack = UIStackView(arrangedSubviews: [ruleLB, btnRules])
         rStack.axis = .vertical
         rStack.spacing = 12
         ruleCard.addSubview(rStack)
         btnRules.addTarget(self, action: #selector(onRules), for: .touchUpInside)
 
-        // ---- 拦截
+        // ---- 鎷︽埅
         stack.addArrangedSubview(btnVPN)
         btnVPN.addTarget(self, action: #selector(onVPN), for: .touchUpInside)
 
@@ -249,7 +245,7 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         tipLB.numberOfLines = 0
         stack.addArrangedSubview(tipLB)
 
-        // ---- 悬浮状态条
+        // ---- 鎮诞鐘舵€佹潯
         pill = FloatingPill()
         view.addSubview(pill)
         pill.translatesAutoresizingMaskIntoConstraints = false
@@ -265,8 +261,7 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         }
 
 
-        // 统一内边距
-        [ (hero, heroImg, 0), (statusCard, sStack, 20), (accountCard, accStack, 18), (ruleCard, rStack, 18) ]
+        // 缁熶竴鍐呰竟璺?        [ (hero, heroImg, 0), (statusCard, sStack, 20), (accountCard, accStack, 18), (ruleCard, rStack, 18) ]
             .forEach { _, sub, pad in
                 sub.translatesAutoresizingMaskIntoConstraints = false
                 NSLayoutConstraint.activate([
@@ -293,7 +288,7 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         ])
     }
 
-    // MARK: 刷新
+    // MARK: 鍒锋柊
 
     private func refresh() {
         let logged = Session.logged
@@ -302,48 +297,47 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
 
         if logged {
             if expired {
-                remainLB.text = "已到期"
+                remainLB.text = "宸插埌鏈?
                 remainLB.textColor = danger
             } else {
-                remainLB.text = "剩余 " + LyFmt.left(exp)
+                remainLB.text = "鍓╀綑 " + LyFmt.left(exp)
                 remainLB.textColor = teal
             }
-            detailLB.text = "账号 " + Session.user + " · 到期 " + LyFmt.date(exp)
+            detailLB.text = "璐﹀彿 " + Session.user + " 路 鍒版湡 " + LyFmt.date(exp)
         } else {
-            remainLB.text = "未登录"
+            remainLB.text = "鏈櫥褰?
             remainLB.textColor = UIColor(white: 0.5, alpha: 1)
-            detailLB.text = "注册需卡密 · 卡密由作者发放"
+            detailLB.text = "娉ㄥ唽闇€鍗″瘑 路 鍗″瘑鐢变綔鑰呭彂鏀?
         }
 
         userTF.isHidden = logged
         passTF.isHidden = logged
-        cardTF.isHidden = false                      // 续期必须能填卡密
+        cardTF.isHidden = false                      // 缁湡蹇呴』鑳藉～鍗″瘑
         btnLogin.isHidden = logged
         btnReg.isHidden = logged
         btnRenew.isHidden = !logged
         btnLogout.isHidden = !logged
 
-        // 进度环（按 30 天为满）
+        // 杩涘害鐜紙鎸?30 澶╀负婊★級
         let leftMs = max(0, exp - Int64(Date().timeIntervalSince1970 * 1000))
         ring.set(ratio: exp <= 0 ? 0 : CGFloat(min(1.0, Double(leftMs) / (30.0 * 86400000.0))),
                  text: LyFmt.bigDays(leftMs),
-                 sub: exp <= 0 ? "未激活" : "剩余")
+                 sub: exp <= 0 ? "鏈縺娲? : "鍓╀綑")
 
-        // 底部悬浮条
-        if pill != nil {
+        // 搴曢儴鎮诞鏉?        if pill != nil {
             pill.update(on: Settings.vpnOn, days: leftMs / 86400000, expired: expired || !logged)
         }
 
         let canUse = logged && !expired
-        btnVPN.setTitle(Settings.vpnOn ? "关闭网络拦截" : "开启网络拦截", for: .normal)
+        btnVPN.setTitle(Settings.vpnOn ? "鍏抽棴缃戠粶鎷︽埅" : "寮€鍚綉缁滄嫤鎴?, for: .normal)
         btnVPN.alpha = canUse ? 1 : 0.45
         btnVPN.isEnabled = canUse
         tipLB.text = canUse
-            ? (Settings.vpnOn ? "拦截运行中（网络层，静默）" : "点击开启后请允许「VPN 配置」")
-            : "到期 / 未登录 · 不可开启"
+            ? (Settings.vpnOn ? "鎷︽埅杩愯涓紙缃戠粶灞傦紝闈欓粯锛? : "鐐瑰嚮寮€鍚悗璇峰厑璁搞€孷PN 閰嶇疆銆?)
+            : "鍒版湡 / 鏈櫥褰?路 涓嶅彲寮€鍚?
     }
 
-    // MARK: 动作
+    // MARK: 鍔ㄤ綔
 
     private func setBusy(_ b: Bool, _ msg: String = "") {
         busy = b
@@ -353,15 +347,15 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
 
     @objc private func onLogin() {
         guard !busy else { return }
-        setBusy(true, "登录中…")
+        setBusy(true, "鐧诲綍涓€?)
         AccountApi.login(user: userTF.text ?? "", pass: passTF.text ?? "") { r in
             self.setBusy(false)
             if r.ok {
                 Session.save(token: r.token, expireAt: r.expireAt, user: r.user.isEmpty ? (self.userTF.text ?? "") : r.user)
-                self.tipLB.text = "登录成功"
+                self.tipLB.text = "鐧诲綍鎴愬姛"
                 self.refresh()
             } else {
-                self.tipLB.text = "登录失败：" + r.msg
+                self.tipLB.text = "鐧诲綍澶辫触锛? + r.msg
             }
         }
     }
@@ -369,17 +363,17 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
     @objc private func onRegister() {
         guard !busy else { return }
         let c = cardTF.text ?? ""
-        if c.count < 6 { tipLB.text = "请先填写卡密"; return }
-        setBusy(true, "注册中…")
+        if c.count < 6 { tipLB.text = "璇峰厛濉啓鍗″瘑"; return }
+        setBusy(true, "娉ㄥ唽涓€?)
         AccountApi.register(user: userTF.text ?? "", pass: passTF.text ?? "", card: c) { r in
             self.setBusy(false)
             if r.ok {
                 Session.save(token: r.token, expireAt: r.expireAt, user: self.userTF.text ?? "")
                 self.cardTF.text = ""
-                self.tipLB.text = "注册成功"
+                self.tipLB.text = "娉ㄥ唽鎴愬姛"
                 self.refresh()
             } else {
-                self.tipLB.text = "注册失败：" + r.msg
+                self.tipLB.text = "娉ㄥ唽澶辫触锛? + r.msg
             }
         }
     }
@@ -387,40 +381,39 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
     @objc private func onRenew() {
         guard !busy else { return }
         let c = cardTF.text ?? ""
-        if c.count < 6 { tipLB.text = "请填写卡密"; return }
-        setBusy(true, "续期中…")
+        if c.count < 6 { tipLB.text = "璇峰～鍐欏崱瀵?; return }
+        setBusy(true, "缁湡涓€?)
         AccountApi.renew(card: c) { r in
             self.setBusy(false)
             if r.ok {
-                Session.touch(expireAt: r.expireAt)      // 关键：同步到期时间
-                self.cardTF.text = ""
-                self.tipLB.text = "续期成功 · 到期 " + LyFmt.date(r.expireAt)
+                Session.touch(expireAt: r.expireAt)      // 鍏抽敭锛氬悓姝ュ埌鏈熸椂闂?                self.cardTF.text = ""
+                self.tipLB.text = "缁湡鎴愬姛 路 鍒版湡 " + LyFmt.date(r.expireAt)
                 self.refresh()
             } else {
-                self.tipLB.text = "续期失败：" + r.msg
+                self.tipLB.text = "缁湡澶辫触锛? + r.msg
             }
         }
     }
 
     @objc private func onLogout() {
         Session.clear()
-        tipLB.text = "已退出"
+        tipLB.text = "宸查€€鍑?
         refresh()
     }
 
     @objc private func onRules() {
         guard !busy else { return }
-        setBusy(true, "拉取规则…")
+        setBusy(true, "鎷夊彇瑙勫垯鈥?)
         CloudRules.fetch { ok, text, diag in
             self.setBusy(false)
             if ok {
                 let lines = text.components(separatedBy: "\n")
                 RuleStore.save(text)
-                self.ruleLB.text = "已同步 · " + String(text.utf8.count) + " 字节\n"
-                    + "规则文本行数：" + String(lines.count) + "\n" + diag
-                self.tipLB.text = "规则已更新"
+                self.ruleLB.text = "宸插悓姝?路 " + String(text.utf8.count) + " 瀛楄妭\n"
+                    + "瑙勫垯鏂囨湰琛屾暟锛? + String(lines.count) + "\n" + diag
+                self.tipLB.text = "瑙勫垯宸叉洿鏂?
             } else {
-                self.ruleLB.text = "拉取失败\n" + diag
+                self.ruleLB.text = "鎷夊彇澶辫触\n" + diag
             }
         }
     }
@@ -430,16 +423,16 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         VPNController.apply(enabled: Settings.vpnOn) { err in
             if let e = err {
                 Settings.vpnOn = false
-                self.tipLB.text = "开启失败：" + e
+                self.tipLB.text = "寮€鍚け璐ワ細" + e
             } else {
-                self.tipLB.text = Settings.vpnOn ? "拦截已开启" : "拦截已关闭"
+                self.tipLB.text = Settings.vpnOn ? "鎷︽埅宸插紑鍚? : "鎷︽埅宸插叧闂?
             }
             self.refresh()
         }
     }
 }
 
-// MARK: - 按钮
+// MARK: - 鎸夐挳
 
 final class LyButton: UIButton {
     enum Style { case primary, ghost }
@@ -467,8 +460,7 @@ final class LyButton: UIButton {
     }
 }
 
-// MARK: - 小工具
-
+// MARK: - 灏忓伐鍏?
 extension UITextField {
     func setLeftPadding(_ w: CGFloat) {
         let v = UIView(frame: CGRect(x: 0, y: 0, width: w, height: 1))
@@ -478,7 +470,7 @@ extension UITextField {
 
 enum LyFmt {
     static func date(_ ms: Int64) -> String {
-        guard ms > 0 else { return "—" }
+        guard ms > 0 else { return "鈥? }
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm"
         return f.string(from: Date(timeIntervalSince1970: Double(ms) / 1000))
@@ -486,17 +478,17 @@ enum LyFmt {
     static func bigDays(_ leftMs: Int64) -> String {
         let sec = Int(max(0, leftMs) / 1000)
         let d = sec / 86400
-        if d > 0 { return "\(d)天" }
+        if d > 0 { return "\(d)澶? }
         let h = sec / 3600
-        if h > 0 { return "\(h)时" }
-        return "\(sec / 60)分"
+        if h > 0 { return "\(h)鏃? }
+        return "\(sec / 60)鍒?
     }
 
     static func left(_ ms: Int64) -> String {
         let sec = max(0, Int(Double(ms) / 1000 - Date().timeIntervalSince1970))
         let d = sec / 86400, h = (sec % 86400) / 3600
-        if d > 0 { return "\(d) 天 \(h) 小时" }
+        if d > 0 { return "\(d) 澶?\(h) 灏忔椂" }
         let m = (sec % 3600) / 60
-        return "\(h) 小时 \(m) 分"
+        return "\(h) 灏忔椂 \(m) 鍒?
     }
 }
