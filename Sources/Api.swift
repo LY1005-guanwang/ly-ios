@@ -17,7 +17,7 @@ enum Srv {
         let b = zip(blob, mask).map { $0 ^ $1 }
         return String(bytes: b, encoding: .utf8) ?? "8.163.83.224"
     }
-    static let port = 8790
+    static let port = 8787
     static let rulesPath = "/p2rL9q"
     static let app = "ly"
 }
