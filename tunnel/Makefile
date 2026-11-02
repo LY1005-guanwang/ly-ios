@@ -5,6 +5,7 @@ include $(THEOS)/makefiles/common.mk
 
 BUNDLE_NAME = LyTunnel
 
+LyTunnel_BUNDLE_EXTENSION = appex
 LyTunnel_FILES = LyTunnel.swift
 LyTunnel_FRAMEWORKS = Foundation NetworkExtension
 LyTunnel_INSTALL_PATH = /Applications/LyInternal.app/PlugIns
