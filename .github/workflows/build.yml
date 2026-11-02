@@ -32,9 +32,9 @@ jobs:
         run: |
           set -e
           make clean all -j4 2>&1 | tail -60
-          echo '--- 编译隧道扩展 ---'
+          echo '--- 缂栬瘧闅ч亾鎵╁睍 ---'
           ( cd tunnel && make clean all -j4 2>&1 | tail -30 ) || echo 'extension build failed (non-fatal)'
-          echo '--- 产物 ---'
+          echo '--- 浜х墿 ---'
           find .theos -name '*.app' -o -name '*.appex' 2>/dev/null | head -20
           find .theos -name "*.app" -o -name "*.appex" | head -20
 
@@ -55,10 +55,12 @@ jobs:
             [ -n "$APPEX" ] && ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
           fi
           chmod 755 Payload/LyInternal.app/LyInternal
+          strip -x "Payload/LyInternal.app/LyInternal" || true
+          [ -n "$APPEX" ] && strip -x "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
-      # 把 ipa 以 base64 分片提交回仓库（这样只需 api.github.com 就能取，绕开被墙的 artifact 下载域）
+      # 鎶?ipa 浠?base64 鍒嗙墖鎻愪氦鍥炰粨搴擄紙杩欐牱鍙渶 api.github.com 灏辫兘鍙栵紝缁曞紑琚鐨?artifact 涓嬭浇鍩燂級
       - name: Publish IPA as base64 chunks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
