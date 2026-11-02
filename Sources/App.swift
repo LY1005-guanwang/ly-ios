@@ -583,10 +583,10 @@ final class SettingsPage: BasePage {
         pageSubtitle = "连接 / 安全 / 关于"
         super.viewDidLoad()
 
-        add(group("连接", rows: [
-            ("服务器", Srv.host + ":" + String(Srv.port)),
-            ("应用标识", Srv.app),
-            ("规则路径", Srv.rulesPath)
+                add(group("连接", rows: [
+            ("通道状态", "已加密 · 证书固定"),
+            ("传输协议", "HTTPS / TLS 1.2+"),
+            ("规则来源", "云端加密下发")
         ]))
         add(group("安全", rows: [
             ("密码策略", "8–32 位 · 字母+数字"),
@@ -595,7 +595,7 @@ final class SettingsPage: BasePage {
             ("规则验签", "RSA-2048 / SHA-256")
         ]))
         add(group("本机", rows: [
-            ("设备指纹", Dev.id),
+            ("设备指纹", String(Dev.id.prefix(4)) + "******"),
             ("缓存规则", String(RuleStore.load().utf8.count) + " 字节")
         ]))
 
