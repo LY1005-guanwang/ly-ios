@@ -10,7 +10,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     func application(_ app: UIApplication,
                      didFinishLaunchingWithOptions opt: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        AntiDebug.denyAttach()          // 加固：禁止调试器附加
         let w = UIWindow(frame: UIScreen.main.bounds)
         w.rootViewController = LyHomeViewController()
         w.makeKeyAndVisible()
@@ -250,22 +249,6 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
         tipLB.numberOfLines = 0
         stack.addArrangedSubview(tipLB)
 
-        // ---- 悬浮状态条
-        pill = FloatingPill()
-        view.addSubview(pill)
-        pill.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            pill.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            pill.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
-            pill.widthAnchor.constraint(equalToConstant: 212),
-            pill.heightAnchor.constraint(equalToConstant: 56)
-        ])
-        pill.onTap = { [weak self] in
-            self?.scroll.setContentOffset(.zero, animated: true)
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
-
-
         // 统一内边距
         [ (hero, heroImg, 0), (statusCard, sStack, 20), (accountCard, accStack, 18), (ruleCard, rStack, 18) ]
             .forEach { _, sub, pad in
@@ -293,6 +276,21 @@ final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
             subLB.topAnchor.constraint(equalTo: titleLB.bottomAnchor, constant: 8)
         ])
     }
+
+        // ---- 悬浮状态条
+        pill = FloatingPill()
+        view.addSubview(pill)
+        pill.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            pill.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            pill.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
+            pill.widthAnchor.constraint(equalToConstant: 212),
+            pill.heightAnchor.constraint(equalToConstant: 56)
+        ])
+        pill.onTap = { [weak self] in
+            self?.scroll.setContentOffset(.zero, animated: true)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
 
     // MARK: 刷新
 
