@@ -293,7 +293,7 @@ final class GlassTabBar: UIView {
     private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterialLight))
     private let hline = UIView()
     var onSelect: ((Int) -> Void)?
-    private var items: [UIButton] = []
+    private var items: [UIControl] = []
     private var indicator = UIView()
     private(set) var current = 0
 
@@ -315,24 +315,37 @@ final class GlassTabBar: UIView {
         addSubview(row)
 
         for (i, t) in titles.enumerated() {
-            let b = UIButton(type: .system)
-            var cfg = UIButton.Configuration.plain()
-            cfg.title = t
-            cfg.image = UIImage(systemName: symbols[min(i, symbols.count - 1)],
-                                withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .medium))
-            cfg.imagePlacement = .top
-            cfg.imagePadding = 4
-            cfg.baseForegroundColor = DS.label3
-            cfg.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { inv in
-                var o = inv
-                o.font = .systemFont(ofSize: 10, weight: .semibold)
-                return o
-            }
-            b.configuration = cfg
-            b.tag = i
-            b.addTarget(self, action: #selector(tap(_:)), for: .touchUpInside)
-            items.append(b)
-            row.addArrangedSubview(b)
+            let item = UIControl()
+            item.tag = i
+            item.addTarget(self, action: #selector(tapItem(_:)), for: .touchUpInside)
+
+            let iv = UIImageView(image: UIImage(systemName: symbols[min(i, symbols.count - 1)],
+                                               withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .medium)))
+            iv.contentMode = .scaleAspectFit
+            iv.tintColor = DS.label3
+
+            let lb = UILabel()
+            lb.text = t
+            lb.font = .systemFont(ofSize: 10, weight: .semibold)
+            lb.textColor = DS.label3
+            lb.textAlignment = .center
+
+            let col = UIStackView(arrangedSubviews: [iv, lb])
+            col.axis = .vertical
+            col.spacing = 4
+            col.alignment = .center
+            col.isUserInteractionEnabled = false
+            item.addSubview(col)
+            col.translatesAutoresizingMaskIntoConstraints = false
+            iv.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                col.centerXAnchor.constraint(equalTo: item.centerXAnchor),
+                col.centerYAnchor.constraint(equalTo: item.centerYAnchor),
+                iv.widthAnchor.constraint(equalToConstant: 20),
+                iv.heightAnchor.constraint(equalToConstant: 20)
+            ])
+            items.append(item)
+            row.addArrangedSubview(item)
         }
 
         blur.translatesAutoresizingMaskIntoConstraints = false
@@ -365,7 +378,7 @@ final class GlassTabBar: UIView {
         indicator.frame = CGRect(x: b.frame.midX - 26, y: 2, width: 52, height: bounds.height - 4)
     }
 
-    @objc private func tap(_ s: UIButton) {
+    @objc private func tapItem(_ s: UIControl) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         select(s.tag, animated: true)
         onSelect?(s.tag)
@@ -373,8 +386,16 @@ final class GlassTabBar: UIView {
 
     func select(_ i: Int, animated: Bool) {
         current = i
-        for (idx, b) in items.enumerated() {
-            b.configuration?.baseForegroundColor = idx == i ? DS.accent : DS.label3
+        for (idx, v) in items.enumerated() {
+            let on = idx == i
+            for sub in v.subviews {
+                if let col = sub as? UIStackView {
+                    for e in col.arrangedSubviews {
+                        if let iv = e as? UIImageView { iv.tintColor = on ? DS.accent : DS.label3 }
+                        if let lb = e as? UILabel { lb.textColor = on ? DS.accent : DS.label3 }
+                    }
+                }
+            }
         }
         let apply = { self.setNeedsLayout(); self.layoutIfNeeded() }
         if animated { UIView.animate(withDuration: 0.28, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.4, animations: apply) }
