@@ -10,6 +10,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     func application(_ app: UIApplication,
                      didFinishLaunchingWithOptions opt: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        AntiDebug.denyAttach()          // 加固：禁止调试器附加
         let w = UIWindow(frame: UIScreen.main.bounds)
         w.rootViewController = LyHomeViewController()
         w.makeKeyAndVisible()
