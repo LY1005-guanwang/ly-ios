@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Theos + iOS SDKs
+      - name: Install Theos and iOS SDKs
         run: |
           set -e
           export THEOS=$HOME/theos
@@ -22,71 +22,68 @@ jobs:
           curl -L --retry 3 https://github.com/theos/sdks/archive/refs/heads/master.tar.gz -o /tmp/sdks.tgz
           tar xzf /tmp/sdks.tgz -C /tmp
           cp -R /tmp/sdks-master/*.sdk "$THEOS/sdks/" || true
-          ls "$THEOS/sdks"
           export PATH="$THEOS/bin:$PATH"
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           echo "$THEOS/bin" >> $GITHUB_PATH
           (brew install ldid >/dev/null 2>&1 || true)
 
-      - name: Build app + tunnel extension
+      - name: Build app and tunnel extension
         run: |
-          set -e
-          make clean all -j4 2>&1 | tail -60
-          echo '--- 缂傚倹鐗為惁褔姊捐娴滈箖骞嶉埡浣烘綌 ---'
-          ( cd tunnel && make clean all -j4 2>&1 | tail -30 ) || echo 'extension build failed (non-fatal)'
-          echo '--- 濞存籂鍛挅 ---'
-          find .theos -name '*.app' -o -name '*.appex' 2>/dev/null | head -20
-          find .theos -name "*.app" -o -name "*.appex" | head -20
+          make clean all -j4 2>&1 | tail -40
+          echo "--- extension ---"
+          ( cd tunnel && make clean all -j4 2>&1 | tail -20 ) || true
+          echo "--- artifacts ---"
+          find . -maxdepth 6 -name "*.app" | head -10
+          find . -maxdepth 6 -name "*.appex" | head -10
 
       - name: Assemble Payload IPA
         run: |
-          set -e
-          APP=$(find .theos/obj -type d -name "LyInternal.app" | head -1)
-          APPEX=$(find . -maxdepth 6 -type d -name "LyTunnel.appex" 2>/dev/null | head -1)
-          echo "APP=$APP"; echo "APPEX=$APPEX"
+          APP=$(find . -maxdepth 6 -type d -name "LyInternal.app" | head -1)
+          APPEX=$(find . -maxdepth 6 -type d -name "LyTunnel.appex" | head -1)
+          echo "APP=$APP"
+          echo "APPEX=$APPEX"
+          test -n "$APP"
           rm -rf Payload LyInternal.ipa
           mkdir -p Payload
           cp -R "$APP" Payload/
           mkdir -p Payload/LyInternal.app/PlugIns
           if [ -n "$APPEX" ]; then cp -R "$APPEX" Payload/LyInternal.app/PlugIns/; fi
-          cp Resources/ly_pub.pem Payload/LyInternal.app/ 2>/dev/null || true
+          if [ -f Resources/ly_pub.pem ]; then cp Resources/ly_pub.pem Payload/LyInternal.app/; fi
           if command -v ldid >/dev/null 2>&1; then
             ldid -Sly_internal.entitlements "Payload/LyInternal.app/LyInternal" || true
-            [ -n "$APPEX" ] && ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
+            if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then
+              ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
+            fi
           fi
-          chmod 755 Payload/LyInternal.app/LyInternal
+          chmod 755 "Payload/LyInternal.app/LyInternal"
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
-      # 闁?ipa 濞?base64 闁告帒妫涙晶鏍箵閹邦亝鍞夐柛銉у仒缁劍鎯旈幙鍕閺夆晜鐟﹂悧閬嶅矗椤忓牊浠?api.github.com 閻忓繗绮鹃崗姗€宕ｉ弽鐢电缂備焦娲栫槐鎴犳偖椤愩埄鏆伴柣?artifact 濞戞挸顑堝ù鍥春閻曞倻绀?      - name: Publish IPA as base64 chunks
+      - name: Publish IPA as base64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
           python3 - <<'PY'
           import base64, json, os, urllib.request, urllib.error
           repo = os.environ['GITHUB_REPOSITORY']
           token = os.environ['GITHUB_TOKEN']
           data = base64.b64encode(open('LyInternal.ipa','rb').read()).decode()
           path = 'dist/ipa.b64'
-          url = f'https://api.github.com/repos/{repo}/contents/{path}'
-          hdr = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json',
-                 'User-Agent': 'ly-builder', 'Content-Type': 'application/json'}
+          url = 'https://api.github.com/repos/%s/contents/%s' % (repo, path)
+          hdr = {'Authorization': 'Bearer %s' % token,
+                 'Accept': 'application/vnd.github+json',
+                 'User-Agent': 'ly-builder',
+                 'Content-Type': 'application/json'}
           sha = None
           try:
-              r = urllib.request.Request(url, headers=hdr)
-              sha = json.load(urllib.request.urlopen(r, timeout=30))['sha']
+              req = urllib.request.Request(url, headers=hdr)
+              sha = json.load(urllib.request.urlopen(req, timeout=30))['sha']
           except urllib.error.HTTPError:
               sha = None
           payload = {'message': 'publish ipa', 'content': data}
-          if sha: payload['sha'] = sha
+          if sha:
+              payload['sha'] = sha
           req = urllib.request.Request(url, data=json.dumps(payload).encode(), method='PUT', headers=hdr)
           urllib.request.urlopen(req, timeout=120).read()
-          print('uploaded dist/ipa.b64, bytes=', len(data))
+          print('uploaded dist/ipa.b64 bytes=%d' % len(data))
           PY
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: LyInternal-ipa
-          path: LyInternal.ipa
-          if-no-files-found: error
