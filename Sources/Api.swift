@@ -209,7 +209,6 @@ enum CloudRules {
             return
         }
         let ts = Int64(Date().timeIntervalSince1970 * 1000)
-        let nonce = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let dev = Dev.id
         let km = ""
         let payload = "\(dev)|\(km)|\(Srv.app)|\(ts)|\(nonce)"
@@ -219,9 +218,6 @@ enum CloudRules {
         req.timeoutInterval = 30
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(Session.token, forHTTPHeaderField: "X-Token")
-        req.setValue(String(ts), forHTTPHeaderField: "X-Ts")
-        req.setValue(nonce, forHTTPHeaderField: "X-Nonce")
-        req.setValue(sig(payload), forHTTPHeaderField: "X-Sig")
         req.httpBody = try? JSONSerialization.data(withJSONObject:
             ["dev": dev, "km": km, "app": Srv.app, "ver": 1])
 
