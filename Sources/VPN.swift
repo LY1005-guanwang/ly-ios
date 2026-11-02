@@ -54,7 +54,7 @@ final class LyTunnelProvider: NEPacketTunnelProvider {
     private var domains = Set<String>()
     private var keywords = [String]()
 
-    override func startTunnel(options: [String: Any]? = nil,
+    override func startTunnel(options: [String: NSObject]? = nil,
                               completionHandler: @escaping (Error?) -> Void) {
         loadRules()
         let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: "10.7.0.1")
