@@ -7,6 +7,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ly-ios-build
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: macos-14
