@@ -32,13 +32,17 @@ jobs:
         run: |
           set -e
           make clean all -j4 2>&1 | tail -60
+          echo '--- 编译隧道扩展 ---'
+          ( cd tunnel && make clean all -j4 2>&1 | tail -30 ) || echo 'extension build failed (non-fatal)'
+          echo '--- 产物 ---'
+          find .theos -name '*.app' -o -name '*.appex' 2>/dev/null | head -20
           find .theos -name "*.app" -o -name "*.appex" | head -20
 
       - name: Assemble Payload IPA
         run: |
           set -e
           APP=$(find .theos/obj -type d -name "LyInternal.app" | head -1)
-          APPEX=$(find .theos/obj -type d -name "LyTunnel.appex" | head -1)
+          APPEX=$(find . -maxdepth 6 -type d -name "LyTunnel.appex" 2>/dev/null | head -1)
           echo "APP=$APP"; echo "APPEX=$APPEX"
           rm -rf Payload LyInternal.ipa
           mkdir -p Payload
