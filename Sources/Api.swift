@@ -169,29 +169,18 @@ enum AccountApi {
 enum CloudRules {
 
     // 派生密钥（由原生密钥派生；iOS 无 .so，直接内嵌派生值）
-    // 密钥：掩码形式存储，运行时还原（二进制里看不到明文 hex）
-    private static let reqMask: [UInt8] = [0xAA, 0x8B, 0xEC, 0xCD, 0x2E, 0x0F, 0x60, 0x41, 0xA2, 0x83, 0xE4, 0xC5, 0x26, 0x07, 0x18, 0x79, 0x5A, 0xBB, 0x9C, 0xFD, 0xDE, 0x3F, 0x10, 0x71, 0x52, 0xB3, 0x94, 0xF5, 0xD6, 0x37, 0x08, 0x69]
-    private static let reqMasked: [UInt8] = [0xD4, 0x50, 0x64, 0x07, 0xAD, 0xA5, 0x5B, 0xAF, 0x8C, 0xB0, 0x83, 0x43, 0x50, 0x4E, 0x23, 0x4C, 0xCE, 0xB3, 0x89, 0x73, 0x73, 0x7D, 0xD1, 0x8C, 0x09, 0xA4, 0x43, 0x4D, 0xFF, 0xAE, 0x53, 0x01]
-    private static let k2Mask: [UInt8] = [0x5B, 0x44, 0x75, 0x66, 0x17, 0x00, 0x31, 0x22, 0xD3, 0xFC, 0xED, 0x9E, 0x8F, 0xB8, 0xA9, 0x5A]
-    private static let k2Masked: [UInt8] = [0x93, 0x77, 0xE9, 0x90, 0xA9, 0x9A, 0xB9, 0xCB, 0xFE, 0x41, 0x97, 0xE9, 0x2A, 0x7D, 0xB5, 0x60]
-
-    private static var reqSecret: [UInt8] {
-        return zip(reqMasked, reqMask).map { $0 ^ $1 }
-    }
-    private static var k2bytes: [UInt8] {
-        return zip(k2Masked, k2Mask).map { $0 ^ $1 }
-    }
- = [
+    private static let reqSecret: [UInt8] = [
         0x7E, 0xDB, 0x88, 0xCA, 0x83, 0xAA, 0x3B, 0xEE, 0x2E, 0x33, 0x67, 0x86, 0x76, 0x49, 0x3B, 0x35,
         0x94, 0x08, 0x15, 0x8E, 0xAD, 0x42, 0xC1, 0xFD, 0x5B, 0x17, 0xD7, 0xB8, 0x29, 0x99, 0x5B, 0x68
     ]
+    private static let k2hex = "c8339cf6be9a88e92dbd7a77a5c51c3a"
 
     private static var lastDiag = ""
 
     private static func sha(_ b: Data) -> Data { Data(SHA256.hash(data: b)) }
 
     private static func rulesKey() -> Data {
-        var k = Data(k2bytes)
+        var k = Data(hex: k2hex) ?? Data()
         k.append("RULES".data(using: .utf8)!)
         return sha(k)
     }
@@ -203,12 +192,8 @@ enum CloudRules {
     }
 
     static func fetch(done: @escaping (Bool, String, String) -> Void) {
-        if AntiDebug.isCompromised {
-            lastDiag = "运行环境异常（调试/注入）"
-            DispatchQueue.main.async { done(false, "", lastDiag) }
-            return
-        }
         let ts = Int64(Date().timeIntervalSince1970 * 1000)
+        let nonce = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let dev = Dev.id
         let km = ""
         let payload = "\(dev)|\(km)|\(Srv.app)|\(ts)|\(nonce)"
@@ -218,6 +203,9 @@ enum CloudRules {
         req.timeoutInterval = 30
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(Session.token, forHTTPHeaderField: "X-Token")
+        req.setValue(String(ts), forHTTPHeaderField: "X-Ts")
+        req.setValue(nonce, forHTTPHeaderField: "X-Nonce")
+        req.setValue(sig(payload), forHTTPHeaderField: "X-Sig")
         req.httpBody = try? JSONSerialization.data(withJSONObject:
             ["dev": dev, "km": km, "app": Srv.app, "ver": 1])
 
