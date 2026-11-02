@@ -30,8 +30,8 @@ final class PinnedSession: NSObject, URLSessionDelegate {
             completionHandler(.useCredential, URLCredential(trust: trust))
             return
         }
-        guard let certs = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
-              let leaf = certs.first else {
+        let count = SecTrustGetCertificateCount(trust)
+        guard count > 0, let leaf = SecTrustGetCertificateAtIndex(trust, 0) else {
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
