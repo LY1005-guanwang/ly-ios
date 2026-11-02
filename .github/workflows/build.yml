@@ -31,7 +31,7 @@ jobs:
       - name: Build app + tunnel extension
         run: |
           set -e
-          make clean package FINALPACKAGE=1 || make clean package
+          make clean all -j4 2>&1 | tail -60
           find .theos -name "*.app" -o -name "*.appex" | head -20
 
       - name: Assemble Payload IPA
