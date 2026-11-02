@@ -56,6 +56,18 @@ jobs:
             fi
           fi
           chmod 755 "Payload/LyInternal.app/LyInternal"
+          if command -v ldid >/dev/null 2>&1; then
+            ldid -Sly_internal.entitlements "Payload/LyInternal.app/LyInternal" || true
+            if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then
+              ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
+            fi
+          fi
+          echo "--- ad-hoc codesign ---"
+          if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then
+            codesign --force --sign - "Payload/LyInternal.app/PlugIns/LyTunnel.appex" 2>&1 | tail -5 || true
+          fi
+          codesign --force --sign - "Payload/LyInternal.app" 2>&1 | tail -5 || true
+          codesign -dv "Payload/LyInternal.app" 2>&1 | head -5 || true
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
