@@ -1,6 +1,6 @@
 //
-//  App.swift — LY内部 iOS · 全新「液态玻璃 · 白色调」UI
-//  iOS 14+ / UIKit 纯代码 / 无 Storyboard
+//  App.swift — LY内部 iOS（重制：底部 Tab 四页面 / 大厂范式 / 液态玻璃）
+//  Home · 账号 · 规则 · 设置
 //
 
 import UIKit
@@ -11,492 +11,704 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ app: UIApplication,
                      didFinishLaunchingWithOptions opt: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         let w = UIWindow(frame: UIScreen.main.bounds)
-        w.rootViewController = LyHomeViewController()
+        w.rootViewController = RootTabs()
         w.makeKeyAndVisible()
         window = w
         return true
     }
 }
 
-// MARK: - 玻璃卡片
+// MARK: - 根容器（自定义玻璃 TabBar）
 
-final class GlassCard: UIView {
-    private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialLight))
-    private let border = CAGradientLayer()
+final class RootTabs: UIViewController {
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = UIColor(white: 1, alpha: 0.55)
-        layer.cornerRadius = 22
-        layer.cornerCurve = .continuous
-        layer.masksToBounds = false
-        layer.shadowColor = UIColor(white: 0.55, alpha: 0.18).cgColor
-        layer.shadowOpacity = 1
-        layer.shadowRadius = 18
-        layer.shadowOffset = CGSize(width: 0, height: 8)
-
-        blur.layer.cornerRadius = 22
-        blur.layer.cornerCurve = .continuous
-        blur.clipsToBounds = true
-        addSubview(blur)
-
-        border.colors = [UIColor(white: 1, alpha: 0.95).cgColor,
-                         UIColor(white: 1, alpha: 0.25).cgColor]
-        border.startPoint = CGPoint(x: 0, y: 0)
-        border.endPoint = CGPoint(x: 1, y: 1)
-        border.cornerRadius = 22
-        layer.addSublayer(border)
-    }
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        blur.frame = bounds
-        border.frame = bounds
-        border.borderWidth = 1
-        let mask = CAShapeLayer()
-        mask.path = UIBezierPath(roundedRect: bounds, cornerRadius: 22).cgPath
-        border.mask = mask
-    }
-}
-
-// MARK: - 主界面
-
-final class LyHomeViewController: UIViewController, UIScrollViewDelegate {
-
-    // 主题色（白调 + 墨绿点缀）
-    private let ink    = UIColor(red: 0.09, green: 0.10, blue: 0.11, alpha: 1)
-    private let teal   = UIColor(red: 0.18, green: 0.44, blue: 0.40, alpha: 1)
-    private let danger = UIColor(red: 0.72, green: 0.24, blue: 0.24, alpha: 1)
-
-    private let scroll = UIScrollView()
-    private let stack  = UIStackView()
-
-    private let hero   = GlassCard()
-    private let heroImg = UIImageView()
-    private let titleLB = UILabel()
-    private let subLB   = UILabel()
-
-    private let statusCard = GlassCard()
-    private let ring = RingView()
-    private var pill: FloatingPill!
-    private let remainLB   = UILabel()
-    private let detailLB   = UILabel()
-
-    private let accountCard = GlassCard()
-    private let userTF  = UITextField()
-    private let passTF  = UITextField()
-    private let cardTF  = UITextField()
-
-    private let btnLogin  = LyButton(title: "登录", style: .primary)
-    private let btnReg    = LyButton(title: "注册（需卡密）", style: .ghost)
-    private let btnRenew  = LyButton(title: "用卡密续期", style: .primary)
-    private let btnLogout = LyButton(title: "退出登录 / 切换账号", style: .ghost)
-
-    private let ruleCard = GlassCard()
-    private let ruleLB   = UILabel()
-    private let btnRules = LyButton(title: "拉取云端规则", style: .ghost)
-
-    private let btnVPN   = LyButton(title: "开启网络拦截", style: .primary)
-    private let tipLB    = UILabel()
-
-    private var busy = false
-
-    // MARK: 生命周期
+    private let pages: [UIViewController] = [HomePage(), AccountPage(), RulesPage(), SettingsPage()]
+    private let container = UIView()
+    private let tabBar = GlassTabBar(titles: ["首页", "账号", "规则", "设置"],
+                                     symbols: ["house.fill", "person.crop.circle", "shield.lefthalf.filled", "gearshape"])
+    private var current: UIViewController?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(white: 0.975, alpha: 1)
-
-        // 背景光晕（液态玻璃质感）
-        let g1 = CAGradientLayer()
-        g1.colors = [UIColor(red: 0.86, green: 0.93, blue: 0.92, alpha: 1).cgColor,
-                     UIColor(white: 1, alpha: 0).cgColor]
-        g1.startPoint = CGPoint(x: 0.1, y: 0)
-        g1.endPoint = CGPoint(x: 0.9, y: 0.45)
-        g1.frame = CGRect(x: -80, y: -140, width: view.bounds.width + 160, height: 460)
-        view.layer.addSublayer(g1)
-
-        let g2 = CAGradientLayer()
-        g2.colors = [UIColor(red: 0.93, green: 0.94, blue: 0.97, alpha: 1).cgColor,
-                     UIColor(white: 1, alpha: 0).cgColor]
-        g2.startPoint = CGPoint(x: 1, y: 1)
-        g2.endPoint = CGPoint(x: 0.2, y: 0.4)
-        g2.frame = CGRect(x: -60, y: view.bounds.height - 420, width: view.bounds.width + 120, height: 480)
-        view.layer.addSublayer(g2)
-
-        buildUI()
-        refresh()
+        view.backgroundColor = DS.bg
+        view.addSubview(container)
+        view.addSubview(tabBar)
+        tabBar.onSelect = { [weak self] i in self?.show(i) }
+        show(0)
     }
+
+    override var childForStatusBarStyle: UIViewController? { current }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        scroll.frame = view.bounds
-        stack.frame = CGRect(x: 18, y: 0, width: view.bounds.width - 36,
-                             height: stack.systemLayoutSizeFitting(
-                                CGSize(width: view.bounds.width - 36, height: .greatestFiniteMagnitude)).height)
-        scroll.contentSize = CGSize(width: view.bounds.width, height: stack.frame.height + 60)
+        let barH: CGFloat = 62
+        let bottom = view.safeAreaInsets.bottom
+        container.frame = view.bounds
+        tabBar.frame = CGRect(x: 0, y: view.bounds.height - barH - bottom,
+                              width: view.bounds.width, height: barH + bottom)
+        current?.view.frame = container.bounds
     }
 
-    // MARK: 构建
+    private func show(_ i: Int) {
+        guard i < pages.count else { return }
+        current?.willMove(toParent: nil)
+        current?.view.removeFromSuperview()
+        current?.removeFromParent()
 
-    private func buildUI() {
-        scroll.delegate = self
-        scroll.alwaysBounceVertical = true
+        let vc = pages[i]
+        addChild(vc)
+        vc.view.frame = container.bounds
+        vc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        vc.view.clipsToBounds = true
+        container.insertSubview(vc.view, at: 0)
+        vc.didMove(toParent: self)
+        current = vc
+        vc.view.alpha = 0
+        UIView.animate(withDuration: 0.22) { vc.view.alpha = 1 }
+        setNeedsStatusBarAppearanceUpdate()
+    }
+}
+
+// MARK: - 页面基类（滚动 + 联动模糊 + 大标题）
+
+class BasePage: UIViewController, UIScrollViewDelegate {
+
+    let scroll = UIScrollView()
+    let stack = UIStackView()
+    private let topBlur = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialLight))
+    private let titleLB = UILabel()
+    private let subLB = UILabel()
+    private let hair = UIView()
+
+    var pageTitle = ""
+    var pageSubtitle = ""
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = DS.bg
+        addBackdrop()
+
         scroll.showsVerticalScrollIndicator = false
+        scroll.alwaysBounceVertical = true
+        scroll.delegate = self
+        scroll.contentInsetAdjustmentBehavior = .never
+        scroll.contentInset = UIEdgeInsets(top: 128, left: 0, bottom: 130, right: 0)
         view.addSubview(scroll)
 
         stack.axis = .vertical
-        stack.spacing = 16
-        stack.alignment = .fill
+        stack.spacing = DS.gap
         scroll.addSubview(stack)
 
-        // ---- Hero
-        hero.translatesAutoresizingMaskIntoConstraints = false
-        hero.heightAnchor.constraint(equalToConstant: 210).isActive = true
-        stack.addArrangedSubview(hero)
+        topBlur.alpha = 0
+        view.addSubview(topBlur)
 
-        heroImg.image = UIImage(named: "hero") ?? UIImage(systemName: "shield.lefthalf.filled")
-        heroImg.contentMode = .scaleAspectFill
-        heroImg.clipsToBounds = true
-        heroImg.layer.cornerRadius = 22
-        heroImg.layer.cornerCurve = .continuous
-        heroImg.alpha = 0.92
-        hero.addSubview(heroImg)
+        titleLB.font = DS.h1(30)
+        titleLB.textColor = DS.label
+        view.addSubview(titleLB)
 
-        titleLB.text = "LY 内部"
-        titleLB.font = .systemFont(ofSize: 34, weight: .semibold)
-        titleLB.textColor = ink
-        titleLB.textAlignment = .center
-        hero.addSubview(titleLB)
+        subLB.font = DS.body(13)
+        subLB.textColor = DS.label3
+        view.addSubview(subLB)
 
-        subLB.text = "网 络 层 · 静 默 拦 截"
-        subLB.font = .systemFont(ofSize: 13, weight: .regular)
-        subLB.textColor = UIColor(white: 0.45, alpha: 1)
-        subLB.textAlignment = .center
-        hero.addSubview(subLB)
+        hair.backgroundColor = UIColor(white: 0, alpha: 0)
+        view.addSubview(hair)
+        titleLB.text = pageTitle
+        subLB.text = pageSubtitle
+    }
 
-        // ---- 状态
-        stack.addArrangedSubview(statusCard)
-        statusCard.translatesAutoresizingMaskIntoConstraints = false
-        statusCard.heightAnchor.constraint(equalToConstant: 124).isActive = true
-        remainLB.font = .systemFont(ofSize: 26, weight: .semibold)
-        remainLB.textColor = teal
-        detailLB.font = .systemFont(ofSize: 13)
-        detailLB.textColor = UIColor(white: 0.45, alpha: 1)
-        let sStack = UIStackView(arrangedSubviews: [remainLB, detailLB])
-        sStack.axis = .vertical
-        sStack.spacing = 6
-        statusCard.addSubview(sStack)
+    override var preferredStatusBarStyle: UIStatusBarStyle { .darkContent }
 
-        // 进度环（右侧）
-        statusCard.addSubview(ring)
-        ring.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            ring.trailingAnchor.constraint(equalTo: statusCard.trailingAnchor, constant: -16),
-            ring.centerYAnchor.constraint(equalTo: statusCard.centerYAnchor),
-            ring.widthAnchor.constraint(equalToConstant: 92),
-            ring.heightAnchor.constraint(equalToConstant: 92)
-        ])
-        // 文本区右侧留出空间
-        sStack.trailingAnchor.constraint(lessThanOrEqualTo: ring.leadingAnchor, constant: -12).isActive = true
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let top = view.safeAreaInsets.top
+        scroll.frame = view.bounds
+        let w = view.bounds.width - DS.pad * 2
+        stack.layoutIfNeeded()
+        let h = stack.systemLayoutSizeFitting(CGSize(width: w, height: UIView.layoutFittingCompressedSize.height)).height
+        stack.frame = CGRect(x: DS.pad, y: 0, width: w, height: h)
+        scroll.contentSize = CGSize(width: view.bounds.width, height: h + 160)
 
-        // ---- 账号
-        stack.addArrangedSubview(accountCard)
-        userTF.placeholder = "账号"
-        passTF.placeholder = "密码"
-        passTF.isSecureTextEntry = true
-        cardTF.placeholder = "卡密（注册 / 续期用）"
-        cardTF.autocapitalizationType = .none
-        [userTF, passTF, cardTF].forEach {
-            $0.font = .systemFont(ofSize: 16)
-            $0.textColor = ink
-            $0.borderStyle = .none
-            $0.backgroundColor = UIColor(white: 1, alpha: 0.75)
-            $0.layer.cornerRadius = 14
-            $0.layer.cornerCurve = .continuous
-            $0.setLeftPadding(14)
-            $0.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        }
-        let accStack = UIStackView(arrangedSubviews: [userTF, passTF, cardTF, btnLogin, btnReg, btnRenew, btnLogout])
-        accStack.axis = .vertical
-        accStack.spacing = 10
-        accountCard.addSubview(accStack)
+        titleLB.frame = CGRect(x: DS.pad, y: top + 10, width: w, height: 38)
+        subLB.frame = CGRect(x: DS.pad, y: top + 48, width: w, height: 18)
+        topBlur.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: top + 82)
+        hair.frame = CGRect(x: 0, y: top + 81, width: view.bounds.width, height: 0.5)
+    }
 
-        btnLogin.addTarget(self, action: #selector(onLogin), for: .touchUpInside)
-        btnReg.addTarget(self, action: #selector(onRegister), for: .touchUpInside)
-        btnRenew.addTarget(self, action: #selector(onRenew), for: .touchUpInside)
-        btnLogout.addTarget(self, action: #selector(onLogout), for: .touchUpInside)
+    private func addBackdrop() {
+        let a = CAGradientLayer()
+        a.colors = [UIColor(red: 0.79, green: 0.91, blue: 0.89, alpha: 1).cgColor,
+                    UIColor(white: 1, alpha: 0).cgColor]
+        a.startPoint = CGPoint(x: 0.05, y: 0)
+        a.endPoint = CGPoint(x: 0.9, y: 0.55)
+        a.frame = CGRect(x: -120, y: -200, width: view.bounds.width + 240, height: 560)
+        view.layer.addSublayer(a)
 
-        // ---- 规则
-        stack.addArrangedSubview(ruleCard)
-        ruleLB.numberOfLines = 0
-        ruleLB.font = .systemFont(ofSize: 13)
-        ruleLB.textColor = UIColor(white: 0.32, alpha: 1)
-        ruleLB.text = "规则状态\n尚未同步"
-        let rStack = UIStackView(arrangedSubviews: [ruleLB, btnRules])
-        rStack.axis = .vertical
-        rStack.spacing = 12
-        ruleCard.addSubview(rStack)
-        btnRules.addTarget(self, action: #selector(onRules), for: .touchUpInside)
+        let b = CAGradientLayer()
+        b.colors = [UIColor(red: 0.89, green: 0.90, blue: 0.97, alpha: 1).cgColor,
+                    UIColor(white: 1, alpha: 0).cgColor]
+        b.startPoint = CGPoint(x: 1, y: 1)
+        b.endPoint = CGPoint(x: 0.1, y: 0.3)
+        b.frame = CGRect(x: -100, y: UIScreen.main.bounds.height - 560, width: view.bounds.width + 200, height: 600)
+        view.layer.addSublayer(b)
+    }
 
-        // ---- 拦截
-        stack.addArrangedSubview(btnVPN)
-        btnVPN.addTarget(self, action: #selector(onVPN), for: .touchUpInside)
+    func scrollViewDidScroll(_ sv: UIScrollView) {
+        let y = sv.contentOffset.y + sv.contentInset.top
+        let p = max(0, min(1, (y - 40) / 60))
+        topBlur.alpha = p
+        hair.backgroundColor = UIColor(white: 0, alpha: 0.06 * p)
+    }
 
-        tipLB.font = .systemFont(ofSize: 12)
-        tipLB.textColor = UIColor(white: 0.55, alpha: 1)
-        tipLB.numberOfLines = 0
-        stack.addArrangedSubview(tipLB)
+    func add(_ v: UIView) { stack.addArrangedSubview(v) }
+}
 
-        // ---- 悬浮状态条
-        pill = FloatingPill()
-        view.addSubview(pill)
+// MARK: - 首页
+
+final class HomePage: BasePage {
+
+    private let hero = GlassCard(radius: 30)
+    private let status = GlassCard()
+    private let ring = RingView()
+    private let accLB = UILabel()
+    private let expLB = UILabel()
+    private let devPill = UILabel()
+    private let quick = GlassCard()
+    private let vpnSwitch = UISwitch()
+
+    override func viewDidLoad() {
+        pageTitle = "LY 内部"
+        pageSubtitle = "网络层 · 静默拦截"
+        super.viewDidLoad()
+        buildHero()
+        buildStatus()
+        buildQuick()
+        NotificationCenter.default.addObserver(self, selector: #selector(reload),
+                                              name: UIApplication.willEnterForegroundNotification, object: nil)
+        reload()
+    }
+
+    private func buildHero() {
+        hero.heightAnchor.constraint(equalToConstant: 188).isActive = true
+        add(hero)
+
+        let t = UILabel()
+        t.text = "静 默 拦 截"
+        t.font = DS.h1(38)
+        t.textColor = DS.label
+        t.textAlignment = .center
+        t.translatesAutoresizingMaskIntoConstraints = false
+        hero.addSubview(t)
+
+        let s = UILabel()
+        s.text = "规则云端下发 · 全程加密 · 设备级校验"
+        s.font = DS.body(12)
+        s.textColor = DS.label2
+        s.textAlignment = .center
+        s.translatesAutoresizingMaskIntoConstraints = false
+        hero.addSubview(s)
+
+        let pill = UILabel()
+        pill.text = "  v3.9 · iOS  "
+        pill.font = DS.cap(11)
+        pill.textColor = DS.accent
+        pill.backgroundColor = DS.accentLo
+        pill.layer.cornerRadius = 10
+        pill.layer.masksToBounds = true
+        pill.textAlignment = .center
         pill.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            pill.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            pill.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
-            pill.widthAnchor.constraint(equalToConstant: 212),
-            pill.heightAnchor.constraint(equalToConstant: 56)
-        ])
-        pill.onTap = { [weak self] in
-            self?.scroll.setContentOffset(.zero, animated: true)
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
+        hero.addSubview(pill)
 
-
-        // 统一内边距
-        [ (hero, heroImg, 0), (statusCard, sStack, 20), (accountCard, accStack, 18), (ruleCard, rStack, 18) ]
-            .forEach { _, sub, pad in
-                sub.translatesAutoresizingMaskIntoConstraints = false
-                NSLayoutConstraint.activate([
-                    sub.leadingAnchor.constraint(equalTo: sub.superview!.leadingAnchor, constant: pad),
-                    sub.trailingAnchor.constraint(equalTo: sub.superview!.trailingAnchor, constant: -pad),
-                    sub.topAnchor.constraint(equalTo: sub.superview!.topAnchor, constant: pad == 0 ? 0 : pad),
-                    sub.bottomAnchor.constraint(equalTo: sub.superview!.bottomAnchor, constant: -pad)
-                ])
-            }
-        heroImg.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            heroImg.leadingAnchor.constraint(equalTo: hero.leadingAnchor),
-            heroImg.trailingAnchor.constraint(equalTo: hero.trailingAnchor),
-            heroImg.topAnchor.constraint(equalTo: hero.topAnchor),
-            heroImg.bottomAnchor.constraint(equalTo: hero.bottomAnchor)
-        ])
-        titleLB.translatesAutoresizingMaskIntoConstraints = false
-        subLB.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            titleLB.centerXAnchor.constraint(equalTo: hero.centerXAnchor),
-            titleLB.centerYAnchor.constraint(equalTo: hero.centerYAnchor, constant: -6),
-            subLB.centerXAnchor.constraint(equalTo: hero.centerXAnchor),
-            subLB.topAnchor.constraint(equalTo: titleLB.bottomAnchor, constant: 8)
+            t.centerXAnchor.constraint(equalTo: hero.centerXAnchor),
+            t.centerYAnchor.constraint(equalTo: hero.centerYAnchor, constant: -16),
+            s.centerXAnchor.constraint(equalTo: hero.centerXAnchor),
+            s.topAnchor.constraint(equalTo: t.bottomAnchor, constant: 6),
+            pill.centerXAnchor.constraint(equalTo: hero.centerXAnchor),
+            pill.topAnchor.constraint(equalTo: s.bottomAnchor, constant: 12),
+            pill.heightAnchor.constraint(equalToConstant: 22)
         ])
     }
 
-    // MARK: 刷新
+    private func buildStatus() {
+        add(status)
+
+        accLB.font = DS.h2(18)
+        accLB.textColor = DS.label
+        accLB.text = "未登录"
+
+        expLB.font = DS.body(12)
+        expLB.textColor = DS.label3
+        expLB.text = "注册需卡密"
+
+        devPill.font = DS.cap(11)
+        devPill.textColor = DS.label2
+        devPill.backgroundColor = UIColor(white: 0.95, alpha: 1)
+        devPill.textAlignment = .center
+        devPill.layer.cornerRadius = 9
+        devPill.layer.masksToBounds = true
+        devPill.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        devPill.widthAnchor.constraint(greaterThanOrEqualToConstant: 126).isActive = true
+
+        let col = UIStackView(arrangedSubviews: [accLB, expLB, devPill])
+        col.axis = .vertical
+        col.spacing = 8
+        col.alignment = .leading
+
+        let row = UIStackView(arrangedSubviews: [ring, col])
+        row.axis = .horizontal
+        row.spacing = 18
+        row.alignment = .center
+        status.addSubview(row)
+
+        row.translatesAutoresizingMaskIntoConstraints = false
+        ring.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            row.leadingAnchor.constraint(equalTo: status.leadingAnchor, constant: 18),
+            row.trailingAnchor.constraint(equalTo: status.trailingAnchor, constant: -18),
+            row.topAnchor.constraint(equalTo: status.topAnchor, constant: 18),
+            row.bottomAnchor.constraint(equalTo: status.bottomAnchor, constant: -18),
+            ring.widthAnchor.constraint(equalToConstant: 104),
+            ring.heightAnchor.constraint(equalToConstant: 104)
+        ])
+    }
+
+    private func buildQuick() {
+        add(quick)
+
+        let title = UILabel()
+        title.text = "网络拦截"
+        title.font = DS.h2(17)
+        title.textColor = DS.label
+
+        let sub = UILabel()
+        sub.font = DS.body(12)
+        sub.textColor = DS.label3
+        sub.numberOfLines = 2
+        sub.text = "按规则丢弃目标 IP / 端口"
+
+        vpnSwitch.onTintColor = DS.accent
+        vpnSwitch.addTarget(self, action: #selector(toggle), for: .valueChanged)
+
+        let left = UIStackView(arrangedSubviews: [title, sub])
+        left.axis = .vertical
+        left.spacing = 4
+
+        let row = UIStackView(arrangedSubviews: [left, vpnSwitch])
+        row.axis = .horizontal
+        row.spacing = 12
+        row.alignment = .center
+        quick.addSubview(row)
+        row.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            row.leadingAnchor.constraint(equalTo: quick.leadingAnchor, constant: 18),
+            row.trailingAnchor.constraint(equalTo: quick.trailingAnchor, constant: -18),
+            row.topAnchor.constraint(equalTo: quick.topAnchor, constant: 18),
+            row.bottomAnchor.constraint(equalTo: quick.bottomAnchor, constant: -18)
+        ])
+    }
+
+    @objc private func reload() {
+        let logged = Session.logged
+        let exp = Session.expireAt
+        let expired = exp > 0 && Int64(Date().timeIntervalSince1970 * 1000) > exp
+        let leftMs = max(0, exp - Int64(Date().timeIntervalSince1970 * 1000))
+
+        accLB.text = logged ? (Session.user.isEmpty ? "已登录" : Session.user) : "未登录"
+        expLB.text = logged ? "到期 " + Fmt.date(exp) : "注册需卡密 · 卡密由作者发放"
+        devPill.text = "  设备 " + String(Dev.id.prefix(8)) + "  "
+
+        ring.set(ratio: exp <= 0 ? 0 : CGFloat(min(1, Double(leftMs) / (30.0 * 86400000.0))),
+                 text: exp <= 0 ? "—" : Fmt.left(leftMs) + Fmt.leftUnit(leftMs),
+                 sub: expired ? "已到期" : "剩余")
+
+        let usable = logged && !expired
+        vpnSwitch.isEnabled = usable
+        if Settings.vpnOn && !usable { Settings.vpnOn = false }
+        vpnSwitch.setOn(Settings.vpnOn, animated: false)
+    }
+
+    @objc private func toggle() {
+        Settings.vpnOn = vpnSwitch.isOn
+        VPNController.apply(enabled: vpnSwitch.isOn) { err in
+            if let e = err {
+                Settings.vpnOn = false
+                self.vpnSwitch.setOn(false, animated: true)
+                HUD.toast("开启失败：" + e, ok: false)
+            } else {
+                HUD.toast(self.vpnSwitch.isOn ? "拦截已开启" : "拦截已关闭")
+            }
+        }
+    }
+}
+
+// MARK: - 账号页
+
+final class AccountPage: BasePage {
+
+    private let card = GlassCard()
+    private let userF = GlassField(symbol: "person", placeholder: "账号")
+    private let passF = GlassField(symbol: "lock", placeholder: "密码", secure: true)
+    private let codeF = GlassField(symbol: "key", placeholder: "卡密（注册 / 续期）")
+    private let loginB = PillButton("登录", symbol: "arrow.right.to.line", height: 54)
+    private let regB = PillButton("注册（需卡密）", symbol: "person.badge.plus", kind: .secondary, height: 50)
+    private let renewB = PillButton("用卡密续期", symbol: "clock.arrow.circlepath", height: 54)
+    private let logoutB = PillButton("退出登录", symbol: "rectangle.portrait.and.arrow.right", kind: .danger, height: 48)
+    private let tip = UILabel()
+
+    override func viewDidLoad() {
+        pageTitle = "账号"
+        pageSubtitle = "登录 / 注册 / 续期（一卡一账号）"
+        super.viewDidLoad()
+
+        add(card)
+        let s = UIStackView(arrangedSubviews: [userF, passF, codeF, loginB, regB, renewB, logoutB])
+        s.axis = .vertical
+        s.spacing = 12
+        card.addSubview(s)
+        s.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            s.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            s.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            s.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
+            s.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16)
+        ])
+
+        tip.font = DS.body(12)
+        tip.textColor = DS.label3
+        tip.numberOfLines = 0
+        tip.text = "密码要求：8–32 位，含字母和数字"
+        add(tip)
+
+        loginB.addTarget(self, action: #selector(onLogin), for: .touchUpInside)
+        regB.addTarget(self, action: #selector(onRegister), for: .touchUpInside)
+        renewB.addTarget(self, action: #selector(onRenew), for: .touchUpInside)
+        logoutB.addTarget(self, action: #selector(onLogout), for: .touchUpInside)
+        refresh()
+    }
 
     private func refresh() {
         let logged = Session.logged
-        let exp = Session.expireAt
-        let expired = exp > 0 && Date().timeIntervalSince1970 * 1000 > Double(exp)
-
-        if logged {
-            if expired {
-                remainLB.text = "已到期"
-                remainLB.textColor = danger
-            } else {
-                remainLB.text = "剩余 " + LyFmt.left(exp)
-                remainLB.textColor = teal
-            }
-            detailLB.text = "账号 " + Session.user + " · 到期 " + LyFmt.date(exp)
-        } else {
-            remainLB.text = "未登录"
-            remainLB.textColor = UIColor(white: 0.5, alpha: 1)
-            detailLB.text = "注册需卡密 · 卡密由作者发放"
-        }
-
-        userTF.isHidden = logged
-        passTF.isHidden = logged
-        cardTF.isHidden = false                      // 续期必须能填卡密
-        btnLogin.isHidden = logged
-        btnReg.isHidden = logged
-        btnRenew.isHidden = !logged
-        btnLogout.isHidden = !logged
-
-        // 进度环（按 30 天为满）
-        let leftMs = max(0, exp - Int64(Date().timeIntervalSince1970 * 1000))
-        ring.set(ratio: exp <= 0 ? 0 : CGFloat(min(1.0, Double(leftMs) / (30.0 * 86400000.0))),
-                 text: LyFmt.bigDays(leftMs),
-                 sub: exp <= 0 ? "未激活" : "剩余")
-
-        // 底部悬浮条
-        if pill != nil {
-            pill.update(on: Settings.vpnOn, days: leftMs / 86400000, expired: expired || !logged)
-        }
-
-        let canUse = logged && !expired
-        btnVPN.setTitle(Settings.vpnOn ? "关闭网络拦截" : "开启网络拦截", for: .normal)
-        btnVPN.alpha = canUse ? 1 : 0.45
-        btnVPN.isEnabled = canUse
-        tipLB.text = canUse
-            ? (Settings.vpnOn ? "拦截运行中（网络层，静默）" : "点击开启后请允许「VPN 配置」")
-            : "到期 / 未登录 · 不可开启"
+        userF.isHidden = logged
+        passF.isHidden = logged
+        loginB.isHidden = logged
+        regB.isHidden = logged
+        renewB.isHidden = !logged
+        logoutB.isHidden = !logged
     }
 
-    // MARK: 动作
-
-    private func setBusy(_ b: Bool, _ msg: String = "") {
-        busy = b
-        [btnLogin, btnReg, btnRenew, btnLogout, btnRules, btnVPN].forEach { $0.isEnabled = !b }
-        if !msg.isEmpty { tipLB.text = msg }
+    private func busy(_ b: Bool, _ msg: String) {
+        [loginB, regB, renewB, logoutB].forEach { $0.isEnabled = !b }
+        tip.text = msg
     }
 
     @objc private func onLogin() {
-        guard !busy else { return }
-        setBusy(true, "登录中…")
-        AccountApi.login(user: userTF.text ?? "", pass: passTF.text ?? "") { r in
-            self.setBusy(false)
+        busy(true, "登录中…")
+        AccountApi.login(user: userF.text, pass: passF.text) { r in
+            self.busy(false, r.ok ? "登录成功" : "登录失败：" + r.msg)
             if r.ok {
-                Session.save(token: r.token, expireAt: r.expireAt, user: r.user.isEmpty ? (self.userTF.text ?? "") : r.user)
-                self.tipLB.text = "登录成功"
+                Session.save(token: r.token, expireAt: r.expireAt, user: r.user.isEmpty ? self.userF.text : r.user)
                 self.refresh()
-            } else {
-                self.tipLB.text = "登录失败：" + r.msg
             }
         }
     }
 
     @objc private func onRegister() {
-        guard !busy else { return }
-        let c = cardTF.text ?? ""
-        if c.count < 6 { tipLB.text = "请先填写卡密"; return }
-        setBusy(true, "注册中…")
-        AccountApi.register(user: userTF.text ?? "", pass: passTF.text ?? "", card: c) { r in
-            self.setBusy(false)
+        guard codeF.text.count >= 6 else { return }
+        busy(true, "注册中…")
+        AccountApi.register(user: userF.text, pass: passF.text, card: codeF.text) { r in
+            self.busy(false, r.ok ? "注册成功" : "注册失败：" + r.msg)
             if r.ok {
-                Session.save(token: r.token, expireAt: r.expireAt, user: self.userTF.text ?? "")
-                self.cardTF.text = ""
-                self.tipLB.text = "注册成功"
+                Session.save(token: r.token, expireAt: r.expireAt, user: self.userF.text)
+                self.codeF.clear()
                 self.refresh()
-            } else {
-                self.tipLB.text = "注册失败：" + r.msg
             }
         }
     }
 
     @objc private func onRenew() {
-        guard !busy else { return }
-        let c = cardTF.text ?? ""
-        if c.count < 6 { tipLB.text = "请填写卡密"; return }
-        setBusy(true, "续期中…")
-        AccountApi.renew(card: c) { r in
-            self.setBusy(false)
+        guard codeF.text.count >= 6 else { return }
+        busy(true, "续期中…")
+        AccountApi.renew(card: codeF.text) { r in
+            self.busy(false, r.ok ? "续期成功" : "续期失败：" + r.msg)
             if r.ok {
-                Session.touch(expireAt: r.expireAt)      // 关键：同步到期时间
-                self.cardTF.text = ""
-                self.tipLB.text = "续期成功 · 到期 " + LyFmt.date(r.expireAt)
+                Session.touch(expireAt: r.expireAt)
+                self.codeF.clear()
                 self.refresh()
-            } else {
-                self.tipLB.text = "续期失败：" + r.msg
             }
         }
     }
 
     @objc private func onLogout() {
+        Settings.vpnOn = false
         Session.clear()
-        tipLB.text = "已退出"
+        refresh()
+    }
+}
+
+// MARK: - 规则页
+
+final class RulesPage: BasePage {
+
+    private let card = GlassCard()
+    private let statusLB = UILabel()
+    private let tiles = UIStackView()
+    private let tIp = StatTile(key: "IP", symbol: "network")
+    private let tPort = StatTile(key: "端口", symbol: "number")
+    private let tDom = StatTile(key: "域名", symbol: "globe")
+    private let tKw = StatTile(key: "关键字", symbol: "text.magnifyingglass")
+    private let syncB = PillButton("拉取云端规则", symbol: "arrow.down.circle", height: 54)
+    private let catCard = GlassCard()
+    private let swIp = UISwitch()
+    private let swPort = UISwitch()
+    private let swDom = UISwitch()
+    private let diag = UILabel()
+
+    override func viewDidLoad() {
+        pageTitle = "规则"
+        pageSubtitle = "云端加密下发 · RSA 验签"
+        super.viewDidLoad()
+
+        add(card)
+        statusLB.font = DS.body(13)
+        statusLB.textColor = DS.label2
+
+        tiles.axis = .horizontal
+        tiles.spacing = 10
+        tiles.distribution = .fillEqually
+        [tIp, tPort, tDom, tKw].forEach { tiles.addArrangedSubview($0) }
+
+        let s = UIStackView(arrangedSubviews: [statusLB, tiles, syncB])
+        s.axis = .vertical
+        s.spacing = 14
+        card.addSubview(s)
+        s.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            s.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            s.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            s.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
+            s.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16)
+        ])
+
+        add(catCard)
+        let head = SectionHeader("拦截范围", subtitle: "按分类启用")
+        let rows = UIStackView()
+        rows.axis = .vertical
+        rows.spacing = 10
+        rows.addArrangedSubview(makeRow("IP / 网段", swIp, "network"))
+        rows.addArrangedSubview(makeRow("端口", swPort, "number"))
+        rows.addArrangedSubview(makeRow("域名 / 关键字", swDom, "globe"))
+        let box = UIStackView(arrangedSubviews: [head, rows])
+        box.axis = .vertical
+        box.spacing = 6
+        catCard.addSubview(box)
+        box.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            box.leadingAnchor.constraint(equalTo: catCard.leadingAnchor, constant: 16),
+            box.trailingAnchor.constraint(equalTo: catCard.trailingAnchor, constant: -16),
+            box.topAnchor.constraint(equalTo: catCard.topAnchor, constant: 12),
+            box.bottomAnchor.constraint(equalTo: catCard.bottomAnchor, constant: -16)
+        ])
+        for sw in [swIp, swPort, swDom] {
+            sw.onTintColor = DS.accent
+            sw.isOn = true
+            sw.addTarget(self, action: #selector(catChanged), for: .valueChanged)
+        }
+
+        diag.font = DS.cap(11)
+        diag.textColor = DS.label3
+        diag.numberOfLines = 0
+        add(diag)
+
+        syncB.addTarget(self, action: #selector(onSync), for: .touchUpInside)
         refresh()
     }
 
-    @objc private func onRules() {
-        guard !busy else { return }
-        setBusy(true, "拉取规则…")
-        CloudRules.fetch { ok, text, diag in
-            self.setBusy(false)
-            if ok {
-                let lines = text.components(separatedBy: "\n")
-                RuleStore.save(text)
-                self.ruleLB.text = "已同步 · " + String(text.utf8.count) + " 字节\n"
-                    + "规则文本行数：" + String(lines.count) + "\n" + diag
-                self.tipLB.text = "规则已更新"
-            } else {
-                self.ruleLB.text = "拉取失败\n" + diag
-            }
-        }
+    private func makeRow(_ name: String, _ sw: UISwitch, _ sym: String) -> UIView {
+        let ic = UIImageView(image: UIImage(systemName: sym,
+                                           withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)))
+        ic.tintColor = DS.label3
+        ic.contentMode = .scaleAspectFit
+        ic.translatesAutoresizingMaskIntoConstraints = false
+        ic.widthAnchor.constraint(equalToConstant: 22).isActive = true
+
+        let l = UILabel()
+        l.text = name
+        l.font = DS.body(15)
+        l.textColor = DS.label
+
+        let row = UIStackView(arrangedSubviews: [ic, l, sw])
+        row.axis = .horizontal
+        row.spacing = 10
+        row.alignment = .center
+        row.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        return row
     }
 
-    @objc private func onVPN() {
-        Settings.vpnOn.toggle()
-        VPNController.apply(enabled: Settings.vpnOn) { err in
-            if let e = err {
-                Settings.vpnOn = false
-                self.tipLB.text = "开启失败：" + e
-            } else {
-                self.tipLB.text = Settings.vpnOn ? "拦截已开启" : "拦截已关闭"
-            }
+    private func refresh() {
+        let txt = RuleStore.load()
+        if txt.isEmpty {
+            statusLB.text = "尚未同步 · 点下方拉取"
+            diag.text = ""
+            tIp.set(0); tPort.set(0); tDom.set(0); tKw.set(0)
+            return
+        }
+        statusLB.text = "已同步 · " + String(txt.utf8.count) + " 字节"
+        let st = RuleStats.parse(txt)
+        tIp.set(st.ip); tPort.set(st.port); tDom.set(st.dom); tKw.set(st.kw)
+        diag.text = "按分类启用：IP/网段、端口、域名与关键字可分别关闭（重开拦截生效）"
+    }
+
+    @objc private func catChanged() {
+        HUD.toast("拦截范围已更新，重开拦截生效")
+    }
+
+    @objc private func onSync() {
+        syncB.isEnabled = false
+        statusLB.text = "拉取中…"
+        CloudRules.fetch { ok, text, d in
+            self.syncB.isEnabled = true
+            if ok { RuleStore.save(text) }
+            self.diag.text = d
             self.refresh()
         }
     }
 }
 
-// MARK: - 按钮
+// MARK: - 设置页
 
-final class LyButton: UIButton {
-    enum Style { case primary, ghost }
-    init(title: String, style: Style) {
+final class SettingsPage: BasePage {
+
+    override func viewDidLoad() {
+        pageTitle = "设置"
+        pageSubtitle = "连接 / 安全 / 关于"
+        super.viewDidLoad()
+
+        add(group("连接", rows: [
+            ("服务器", Srv.host + ":" + String(Srv.port)),
+            ("应用标识", Srv.app),
+            ("规则路径", Srv.rulesPath)
+        ]))
+        add(group("安全", rows: [
+            ("密码策略", "8–32 位 · 字母+数字"),
+            ("设备绑定", "单设备在线"),
+            ("登录锁定", "5 次失败锁 15 分钟"),
+            ("规则验签", "RSA-2048 / SHA-256")
+        ]))
+        add(group("本机", rows: [
+            ("设备指纹", Dev.id),
+            ("缓存规则", String(RuleStore.load().utf8.count) + " 字节")
+        ]))
+
+        let clear = PillButton("清除本地规则缓存", symbol: "trash", kind: .danger, height: 50)
+        clear.addTarget(self, action: #selector(onClear), for: .touchUpInside)
+        add(clear)
+
+        let about = UILabel()
+        about.font = DS.cap(11)
+        about.textColor = DS.label3
+        about.numberOfLines = 0
+        about.text = "LY 内部 iOS v3.9 · 液态玻璃界面\n仅做网络层拦截，不修改任何进程内存"
+        add(about)
+    }
+
+    private func group(_ title: String, rows: [(String, String)]) -> UIView {
+        let c = GlassCard()
+        let head = SectionHeader(title)
+        let s = UIStackView()
+        s.axis = .vertical
+        s.spacing = 0
+        for (k, v) in rows {
+            let l = UILabel()
+            l.text = k
+            l.font = DS.body(15)
+            l.textColor = DS.label
+
+            let r = UILabel()
+            r.text = v
+            r.font = DS.body(13)
+            r.textColor = DS.label3
+            r.textAlignment = .right
+            r.lineBreakMode = .byTruncatingMiddle
+
+            let row = UIStackView(arrangedSubviews: [l, r])
+            row.axis = .horizontal
+            row.spacing = 12
+            row.alignment = .center
+            row.heightAnchor.constraint(equalToConstant: 44).isActive = true
+            s.addArrangedSubview(row)
+        }
+        let box = UIStackView(arrangedSubviews: [head, s])
+        box.axis = .vertical
+        box.spacing = 4
+        c.addSubview(box)
+        box.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            box.leadingAnchor.constraint(equalTo: c.leadingAnchor, constant: 16),
+            box.trailingAnchor.constraint(equalTo: c.trailingAnchor, constant: -16),
+            box.topAnchor.constraint(equalTo: c.topAnchor, constant: 12),
+            box.bottomAnchor.constraint(equalTo: c.bottomAnchor, constant: -16)
+        ])
+        return c
+    }
+
+    @objc private func onClear() {
+        RuleStore.save("")
+        HUD.toast("已清除")
+    }
+}
+
+// MARK: - 玻璃输入框
+
+final class GlassField: UIView, UITextFieldDelegate {
+    private let field = UITextField()
+    private let icon = UIImageView()
+    var text: String { field.text ?? "" }
+    func clear() { field.text = "" }
+
+    init(symbol: String, placeholder: String, secure: Bool = false) {
         super.init(frame: .zero)
-        setTitle(title, for: .normal)
-        titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+        backgroundColor = UIColor(white: 1, alpha: 0.9)
         layer.cornerRadius = 16
         layer.cornerCurve = .continuous
-        heightAnchor.constraint(equalToConstant: 52).isActive = true
-        switch style {
-        case .primary:
-            backgroundColor = UIColor(red: 0.18, green: 0.44, blue: 0.40, alpha: 1)
-            setTitleColor(.white, for: .normal)
-        case .ghost:
-            backgroundColor = UIColor(white: 1, alpha: 0.8)
-            setTitleColor(UIColor(red: 0.18, green: 0.44, blue: 0.40, alpha: 1), for: .normal)
-            layer.borderWidth = 1
-            layer.borderColor = UIColor(white: 0.88, alpha: 1).cgColor
-        }
+        layer.borderWidth = 1
+        layer.borderColor = UIColor(white: 0.92, alpha: 1).cgColor
+
+        icon.image = UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .medium))
+        icon.tintColor = DS.label3
+        icon.contentMode = .scaleAspectFit
+        addSubview(icon)
+
+        field.font = DS.body(16)
+        field.textColor = DS.label
+        field.placeholder = placeholder
+        field.isSecureTextEntry = secure
+        field.autocapitalizationType = .none
+        field.autocorrectionType = .no
+        field.delegate = self
+        addSubview(field)
+
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        field.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            heightAnchor.constraint(equalToConstant: 54),
+            icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            icon.centerYAnchor.constraint(equalTo: centerYAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 19),
+            icon.heightAnchor.constraint(equalToConstant: 19),
+            field.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 12),
+            field.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
+            field.centerYAnchor.constraint(equalTo: centerYAnchor),
+            field.heightAnchor.constraint(equalToConstant: 40)
+        ])
     }
     required init?(coder: NSCoder) { fatalError() }
-    override var isHighlighted: Bool {
-        didSet { alpha = isHighlighted ? 0.75 : 1 }
-    }
-}
 
-// MARK: - 小工具
-
-extension UITextField {
-    func setLeftPadding(_ w: CGFloat) {
-        let v = UIView(frame: CGRect(x: 0, y: 0, width: w, height: 1))
-        leftView = v; leftViewMode = .always
+    func textFieldDidBeginEditing(_ t: UITextField) {
+        layer.borderColor = DS.accent.withAlphaComponent(0.55).cgColor
+        backgroundColor = .white
     }
-}
-
-enum LyFmt {
-    static func date(_ ms: Int64) -> String {
-        guard ms > 0 else { return "—" }
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd HH:mm"
-        return f.string(from: Date(timeIntervalSince1970: Double(ms) / 1000))
-    }
-    static func bigDays(_ leftMs: Int64) -> String {
-        let sec = Int(max(0, leftMs) / 1000)
-        let d = sec / 86400
-        if d > 0 { return "\(d)天" }
-        let h = sec / 3600
-        if h > 0 { return "\(h)时" }
-        return "\(sec / 60)分"
-    }
-
-    static func left(_ ms: Int64) -> String {
-        let sec = max(0, Int(Double(ms) / 1000 - Date().timeIntervalSince1970))
-        let d = sec / 86400, h = (sec % 86400) / 3600
-        if d > 0 { return "\(d) 天 \(h) 小时" }
-        let m = (sec % 3600) / 60
-        return "\(h) 小时 \(m) 分"
+    func textFieldDidEndEditing(_ t: UITextField) {
+        layer.borderColor = UIColor(white: 0.92, alpha: 1).cgColor
+        backgroundColor = UIColor(white: 1, alpha: 0.9)
     }
 }
