@@ -32,9 +32,9 @@ jobs:
         run: |
           set -e
           make clean all -j4 2>&1 | tail -60
-          echo '--- 缂傛牞鐦ч梾褔浜鹃幍鈺佺潔 ---'
+          echo '--- 缂傚倹鐗為惁褔姊捐娴滈箖骞嶉埡浣烘綌 ---'
           ( cd tunnel && make clean all -j4 2>&1 | tail -30 ) || echo 'extension build failed (non-fatal)'
-          echo '--- 娴溠呭⒖ ---'
+          echo '--- 濞存籂鍛挅 ---'
           find .theos -name '*.app' -o -name '*.appex' 2>/dev/null | head -20
           find .theos -name "*.app" -o -name "*.appex" | head -20
 
@@ -55,13 +55,10 @@ jobs:
             [ -n "$APPEX" ] && ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" || true
           fi
           chmod 755 Payload/LyInternal.app/LyInternal
-          strip -x "Payload/LyInternal.app/LyInternal" || true
-          if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then strip -x "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" 2>/dev/null || true; fi
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
-      # 閹?ipa 娴?base64 閸掑棛澧栭幓鎰唉閸ョ偘绮ㄦ惔鎿勭礄鏉╂瑦鐗遍崣顏堟付 api.github.com 鐏忚精鍏橀崣鏍电礉缂佹洖绱戠悮顐㈩暰閻?artifact 娑撳娴囬崺鐕傜礆
-      - name: Publish IPA as base64 chunks
+      # 闁?ipa 濞?base64 闁告帒妫涙晶鏍箵閹邦亝鍞夐柛銉у仒缁劍鎯旈幙鍕閺夆晜鐟﹂悧閬嶅矗椤忓牊浠?api.github.com 閻忓繗绮鹃崗姗€宕ｉ弽鐢电缂備焦娲栫槐鎴犳偖椤愩埄鏆伴柣?artifact 濞戞挸顑堝ù鍥春閻曞倻绀?      - name: Publish IPA as base64 chunks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
