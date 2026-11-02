@@ -132,10 +132,10 @@ enum AccountApi {
         if !token.isEmpty { req.setValue(token, forHTTPHeaderField: "X-Token") }
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        URLSession(configuration: .ephemeral).dataTask(with: req) { data, resp, err in
+        Net.session.dataTask(with: req) { data, resp, err in
             var r = ApiResult()
             defer { DispatchQueue.main.async { done(r) } }
-            if let e = err { r.msg = "网络异常：" + e.localizedDescription; return }
+            if let e = err { r.msg = (e.localizedDescription.contains("certificate") || e.localizedDescription.contains("证书")) ? "安全通道异常（证书校验未通过）" : "网络异常：" + e.localizedDescription; return }
             guard let d = data, let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else {
                 r.msg = "响应无法解析"; return
             }
@@ -209,7 +209,7 @@ enum CloudRules {
         req.httpBody = try? JSONSerialization.data(withJSONObject:
             ["dev": dev, "km": km, "app": Srv.app, "ver": 1])
 
-        URLSession(configuration: .ephemeral).dataTask(with: req) { data, resp, err in
+        Net.session.dataTask(with: req) { data, resp, err in
             var ok = false, text = ""
             lastDiag = ""
             defer { DispatchQueue.main.async { done(ok, text, lastDiag) } }
