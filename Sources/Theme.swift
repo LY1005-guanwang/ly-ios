@@ -9,7 +9,7 @@ import UIKit
 
 enum DS {
     // 颜色
-    static let bg      = UIColor(red: 0.965, green: 0.968, blue: 0.973, alpha: 1)   // #F6F7F8
+    static let bg      = UIColor(red: 0.949, green: 0.953, blue: 0.961, alpha: 1)   // #F6F7F8
     static let label   = UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1)
     static let label2  = UIColor(red: 0.36, green: 0.39, blue: 0.42, alpha: 1)
     static let label3  = UIColor(red: 0.60, green: 0.62, blue: 0.65, alpha: 1)
@@ -41,31 +41,31 @@ final class GlassCard: UIView {
     private let sheen = CAGradientLayer()
     var radius: CGFloat = DS.r
 
-    init(radius: CGFloat = DS.r, tint: CGFloat = 0.50) {
+    init(radius: CGFloat = DS.r, tint: CGFloat = 0.42) {
         super.init(frame: .zero)
         self.radius = radius
         backgroundColor = UIColor(white: 1, alpha: tint)
         layer.cornerRadius = radius
         layer.cornerCurve = .continuous
-        layer.shadowColor = UIColor(red: 0.42, green: 0.46, blue: 0.52, alpha: 0.16).cgColor
+        layer.shadowColor = UIColor(red: 0.40, green: 0.45, blue: 0.52, alpha: 0.10).cgColor
         layer.shadowOpacity = 1
-        layer.shadowRadius = 24
-        layer.shadowOffset = CGSize(width: 0, height: 10)
+        layer.shadowRadius = 16
+        layer.shadowOffset = CGSize(width: 0, height: 6)
 
         blur.layer.cornerRadius = radius
         blur.layer.cornerCurve = .continuous
         blur.clipsToBounds = true
         addSubview(blur)
 
-        rim.colors = [UIColor(white: 1, alpha: 0.98).cgColor,
-                      UIColor(white: 1, alpha: 0.28).cgColor,
-                      UIColor(white: 1, alpha: 0.62).cgColor]
+        rim.colors = [UIColor(white: 1, alpha: 0.90).cgColor,
+                      UIColor(white: 1, alpha: 0.10).cgColor,
+                      UIColor(white: 1, alpha: 0.45).cgColor]
         rim.locations = [0, 0.55, 1]
         rim.startPoint = CGPoint(x: 0, y: 0)
         rim.endPoint = CGPoint(x: 1, y: 1)
         layer.addSublayer(rim)
 
-        sheen.colors = [UIColor(white: 1, alpha: 0.5).cgColor,
+        sheen.colors = [UIColor(white: 1, alpha: 0.32).cgColor,
                         UIColor(white: 1, alpha: 0).cgColor]
         sheen.startPoint = CGPoint(x: 0.5, y: 0)
         sheen.endPoint = CGPoint(x: 0.5, y: 0.4)
