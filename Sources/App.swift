@@ -18,55 +18,61 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-// MARK: - 根容器（自定义玻璃 TabBar）
+// MARK: - 根容器（原生 UITabBar + 系统毛玻璃）
 
-final class RootTabs: UIViewController {
+final class RootTabs: UITabBarController {
 
-    private let pages: [UIViewController] = [HomePage(), AccountPage(), RulesPage(), SettingsPage()]
-    private let container = UIView()
-    private let tabBar = GlassTabBar(titles: ["首页", "账号", "规则", "设置"],
-                                     symbols: ["house.fill", "person.crop.circle", "shield.lefthalf.filled", "gearshape"])
-    private var current: UIViewController?
+    private let titles = ["首页", "账号", "规则", "设置"]
+    private let icons  = ["house.fill", "person.crop.circle.fill", "shield.lefthalf.filled", "gearshape.fill"]
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = DS.bg
-        view.addSubview(container)
-        view.addSubview(tabBar)
-        tabBar.onSelect = { [weak self] i in self?.show(i) }
-        show(0)
+
+        viewControllers = [HomePage(), AccountPage(), RulesPage(), SettingsPage()]
+
+        // 系统毛玻璃底栏（大厂通用做法）
+        let ap = UITabBarAppearance()
+        ap.configureWithDefaultBackground()
+        ap.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
+        ap.backgroundColor = UIColor(white: 1, alpha: 0.55)
+        ap.shadowColor = UIColor(white: 0, alpha: 0.06)
+        ap.shadowImage = UIImage()
+
+        let item = UITabBarItemAppearance()
+        item.normal.iconColor = DS.label3
+        item.normal.titleTextAttributes = [
+            .font: UIFont.systemFont(ofSize: 10, weight: .medium),
+            .foregroundColor: DS.label3
+        ]
+        item.selected.iconColor = DS.accent
+        item.selected.titleTextAttributes = [
+            .font: UIFont.systemFont(ofSize: 10, weight: .semibold),
+            .foregroundColor: DS.accent
+        ]
+        item.normal.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 1)
+        item.selected.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 1)
+        ap.stackedLayoutAppearance = item
+        ap.inlineLayoutAppearance = item
+        ap.compactInlineLayoutAppearance = item
+
+        tabBar.standardAppearance = ap
+        if #available(iOS 15.0, *) { tabBar.scrollEdgeAppearance = ap }
+        tabBar.tintColor = DS.accent
+        tabBar.unselectedItemTintColor = DS.label3
+        tabBar.isTranslucent = true
+
+        for (i, vc) in (viewControllers ?? []).enumerated() {
+            vc.tabBarItem = UITabBarItem(
+                title: titles[i],
+                image: UIImage(systemName: icons[i],
+                               withConfiguration: UIImage.SymbolConfiguration(pointSize: 19, weight: .regular)),
+                selectedImage: nil)
+            vc.tabBarItem.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 1)
+        }
+        selectedIndex = 0
     }
 
-    override var childForStatusBarStyle: UIViewController? { current }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        let barH: CGFloat = 62
-        let bottom = view.safeAreaInsets.bottom
-        container.frame = view.bounds
-        tabBar.frame = CGRect(x: 0, y: view.bounds.height - barH - bottom,
-                              width: view.bounds.width, height: barH + bottom)
-        current?.view.frame = container.bounds
-    }
-
-    private func show(_ i: Int) {
-        guard i < pages.count else { return }
-        current?.willMove(toParent: nil)
-        current?.view.removeFromSuperview()
-        current?.removeFromParent()
-
-        let vc = pages[i]
-        addChild(vc)
-        vc.view.frame = container.bounds
-        vc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        vc.view.clipsToBounds = true
-        container.insertSubview(vc.view, at: 0)
-        vc.didMove(toParent: self)
-        current = vc
-        vc.view.alpha = 0
-        UIView.animate(withDuration: 0.22) { vc.view.alpha = 1 }
-        setNeedsStatusBarAppearanceUpdate()
-    }
+    override var childForStatusBarStyle: UIViewController? { selectedViewController }
 }
 
 // MARK: - 页面基类（滚动 + 联动模糊 + 大标题）
@@ -92,7 +98,7 @@ class BasePage: UIViewController, UIScrollViewDelegate {
         scroll.alwaysBounceVertical = true
         scroll.delegate = self
         scroll.contentInsetAdjustmentBehavior = .never
-        scroll.contentInset = UIEdgeInsets(top: 128, left: 0, bottom: 130, right: 0)
+        scroll.contentInset = UIEdgeInsets(top: 118, left: 0, bottom: 150, right: 0)
         view.addSubview(scroll)
 
         stack.axis = .vertical
