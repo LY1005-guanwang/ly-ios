@@ -125,7 +125,7 @@ struct ApiResult {
 enum AccountApi {
 
     private static func post(_ path: String, _ body: [String: Any], token: String = "", done: @escaping (ApiResult) -> Void) {
-        var req = URLRequest(url: URL(string: "http://\(Srv.host):\(Srv.port)\(path)")!)
+        var req = URLRequest(url: URL(string: "https://\(Srv.host):\(Srv.port)\(path)")!)
         req.httpMethod = "POST"
         req.timeoutInterval = 20
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -198,7 +198,7 @@ enum CloudRules {
         let km = ""
         let payload = "\(dev)|\(km)|\(Srv.app)|\(ts)|\(nonce)"
 
-        var req = URLRequest(url: URL(string: "http://\(Srv.host):\(Srv.port)\(Srv.rulesPath)")!)
+        var req = URLRequest(url: URL(string: "https://\(Srv.host):\(Srv.port)\(Srv.rulesPath)")!)
         req.httpMethod = "POST"
         req.timeoutInterval = 30
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
