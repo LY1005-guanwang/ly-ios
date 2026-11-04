@@ -279,13 +279,7 @@ enum CloudRules {
                 let d = dstRaw.bindMemory(to: UInt8.self)
                 let s = srcRaw.bindMemory(to: UInt8.self)
                 while off < ct.count {
-                    var be = [UInt8](repeating: 0, count: 4)
-                    be[0] = UInt8(truncatingIfNeeded: block >> 24)
-                    be[1] = UInt8(truncatingIfNeeded: block >> 16)
-                    be[2] = UInt8(truncatingIfNeeded: block >> 8)
-                    be[3] = UInt8(truncatingIfNeeded: block)
-                    cur = sha(cur + Data(be))
-                    block = block &+ 1
+                    // use current block first (server: out.push(cur) before rehashing)
                     let n = min(cur.count, ct.count - off)
                     cur.withUnsafeBytes { keyRaw in
                         let k = keyRaw.bindMemory(to: UInt8.self)
@@ -296,6 +290,14 @@ enum CloudRules {
                         }
                     }
                     off += n
+                    // then advance: cur = sha256(cur || be32(block))
+                    var be = [UInt8](repeating: 0, count: 4)
+                    be[0] = UInt8(truncatingIfNeeded: block >> 24)
+                    be[1] = UInt8(truncatingIfNeeded: block >> 16)
+                    be[2] = UInt8(truncatingIfNeeded: block >> 8)
+                    be[3] = UInt8(truncatingIfNeeded: block)
+                    cur = sha(cur + Data(be))
+                    block = block &+ 1
                 }
             }
         }
