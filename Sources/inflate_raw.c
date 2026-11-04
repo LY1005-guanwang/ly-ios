@@ -38,3 +38,33 @@ unsigned char *ly_inflate_raw(const unsigned char *in, size_t inLen, size_t *out
     if (outLen) *outLen = len;
     return out;
 }
+
+/* zlib 包装（带 2 字节头）兜底 */
+unsigned char *ly_inflate_zlib(const unsigned char *in, size_t inLen, size_t *outLen) {
+    if (!in || inLen == 0) return NULL;
+    if (outLen) *outLen = 0;
+    z_stream s; memset(&s, 0, sizeof(s));
+    if (inflateInit2(&s, 15 + 32) != Z_OK) return NULL;
+    size_t cap = inLen * 4 + 4096, len = 0;
+    unsigned char *out = (unsigned char *)malloc(cap);
+    if (!out) { inflateEnd(&s); return NULL; }
+    s.next_in = (Bytef *)in; s.avail_in = (uInt)inLen;
+    int ret;
+    do {
+        if (len == cap) {
+            cap *= 2;
+            unsigned char *n = (unsigned char *)realloc(out, cap);
+            if (!n) { free(out); inflateEnd(&s); return NULL; }
+            out = n;
+        }
+        s.next_out = out + len; s.avail_out = (uInt)(cap - len);
+        ret = inflate(&s, Z_NO_FLUSH);
+        len = cap - s.avail_out;
+        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR) {
+            free(out); inflateEnd(&s); return NULL;
+        }
+    } while (ret != Z_STREAM_END);
+    inflateEnd(&s);
+    if (outLen) *outLen = len;
+    return out;
+}
