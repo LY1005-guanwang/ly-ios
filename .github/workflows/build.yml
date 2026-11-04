@@ -53,6 +53,13 @@ jobs:
           rm -rf Payload/LyInternal.app/_CodeSignature Payload/LyInternal.app/CodeResources 2>/dev/null || true
           rm -rf Payload/LyInternal.app/PlugIns/LyTunnel.appex/_CodeSignature 2>/dev/null || true
           chmod 755 "Payload/LyInternal.app/LyInternal"
+          if command -v ldid >/dev/null 2>&1; then
+            ldid -Sly_internal.entitlements "Payload/LyInternal.app/LyInternal" 2>/dev/null || echo "ldid app failed (ignored)"
+            if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then
+              ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" 2>/dev/null || echo "ldid appex failed (ignored)"
+            fi
+          fi
+          lipo -info "Payload/LyInternal.app/LyInternal" || true
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
