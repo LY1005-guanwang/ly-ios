@@ -272,21 +272,26 @@ enum CloudRules {
         let key = rulesKey()
         var cur = sha(key + "RULES".data(using: .utf8)!)
         var out = Data(count: ct.count)
-        var i = 0
+        var off = 0
+        var block: UInt32 = 0          // 服务端用的是块序号（0,1,2…），不是字节偏移
         out.withUnsafeMutableBytes { dst in
             ct.withUnsafeBytes { src in
-                let d = dst.bindMemory(to: UInt8.self), s = src.bindMemory(to: UInt8.self)
-                while i < ct.count {
+                let d = dst.bindMemory(to: UInt8.self)
+                let s = src.bindMemory(to: UInt8.self)
+                while off < ct.count {
                     var be = [UInt8](repeating: 0, count: 4)
-                    be[0] = UInt8((i >> 24) & 0xff); be[1] = UInt8((i >> 16) & 0xff)
-                    be[2] = UInt8((i >> 8) & 0xff);  be[3] = UInt8(i & 0xff)
+                    be[0] = UInt8((block >> 24) & 0xff)
+                    be[1] = UInt8((block >> 16) & 0xff)
+                    be[2] = UInt8((block >> 8) & 0xff)
+                    be[3] = UInt8(block & 0xff)
                     cur = sha(cur + Data(be))
-                    let n = min(cur.count, ct.count - i)
+                    block &+= 1
+                    let n = min(cur.count, ct.count - off)
                     cur.withUnsafeBytes { kb in
                         let k = kb.bindMemory(to: UInt8.self)
-                        for j in 0..<n { d[i + j] = s[i + j] ^ k[j] }
+                        for j in 0..<n { d[off + j] = s[off + j] ^ k[j] }
                     }
-                    i += n
+                    off += n
                 }
             }
         }
