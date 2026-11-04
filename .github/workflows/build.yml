@@ -47,7 +47,16 @@ jobs:
           mkdir -p Payload
           cp -R "$APP" Payload/
           mkdir -p Payload/LyInternal.app/PlugIns
-          if [ -n "$APPEX" ]; then cp -R "$APPEX" Payload/LyInternal.app/PlugIns/; fi
+          if [ -n "$APPEX" ]; then
+            cp -R "$APPEX" Payload/LyInternal.app/PlugIns/
+            # lytunnel_fix: appex 只能用 LyTunnel 的 Info.plist，且只保留 LyTunnel 二进制
+            APPEXDIR="Payload/LyInternal.app/PlugIns/LyTunnel.appex"
+            cp Resources/tunnel-Info.plist "$APPEXDIR/Info.plist"
+            rm -f "$APPEXDIR/LyInternal" "$APPEXDIR/ly_pub.pem" 2>/dev/null || true
+            echo "--- appex 内容 ---"
+            ls -la "$APPEXDIR"
+            plutil -p "$APPEXDIR/Info.plist" | grep -E "CFBundleExecutable|CFBundleIdentifier" || true
+          fi
           if [ -f Resources/ly_pub.pem ]; then cp Resources/ly_pub.pem Payload/LyInternal.app/; fi
           # 清理可能残留的签名，交给安装工具去签
           rm -rf Payload/LyInternal.app/_CodeSignature Payload/LyInternal.app/CodeResources 2>/dev/null || true
