@@ -569,11 +569,29 @@ final class RulesPage: BasePage {
     }
 
     @objc private func onSync() {
+        if !Session.logged {
+            statusLB.text = "请先在「账号」页登录"
+            diag.text = "规则接口需要账号凭证（X-Token）"
+            HUD.toast("请先登录账号再拉取规则", ok: false)
+            return
+        }
+        if Session.expired {
+            statusLB.text = "账号已到期"
+            diag.text = "请先续期，再拉取规则"
+            HUD.toast("账号已到期，请续期", ok: false)
+            return
+        }
         syncB.isEnabled = false
         statusLB.text = "拉取中…"
+        diag.text = ""
         CloudRules.fetch { ok, text, d in
             self.syncB.isEnabled = true
-            if ok { RuleStore.save(text) }
+            if ok {
+                RuleStore.save(text)
+                HUD.toast("规则已同步 · " + String(text.utf8.count) + " 字节")
+            } else {
+                HUD.toast("拉取失败：" + (d.isEmpty ? "未知错误" : d), ok: false)
+            }
             self.diag.text = d
             self.refresh()
         }
