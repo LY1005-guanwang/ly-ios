@@ -216,8 +216,12 @@ enum CloudRules {
             if let e = err { lastDiag = "网络异常：" + e.localizedDescription; return }
             guard let d = data, d.count > 16 else { lastDiag = "响应为空"; return }
             if let http = resp as? HTTPURLResponse, http.statusCode != 200 {
-                let body = String(data: d.prefix(120), encoding: .utf8) ?? ""
-                lastDiag = "服务器返回 HTTP \(http.statusCode) \(body)"
+                var msg = ""
+                if let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
+                    msg = (o["msg"] as? String) ?? (o["code"] as? String) ?? ""
+                }
+                if msg.isEmpty { msg = String(data: d.prefix(80), encoding: .utf8) ?? "" }
+                lastDiag = "HTTP \(http.statusCode)：\(msg)"
                 return
             }
             if let s = unwrap(d) { text = s; ok = true }
