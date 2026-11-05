@@ -1,30 +1,31 @@
-﻿//
-//  Theme.swift 鈥?璁捐绯荤粺锛堝鏍囧ぇ鍘傦細Apple HIG / Material 3 鐨勫眰娆′笌鐣欑櫧锛?//  鐜荤拑鍗＄墖 / 鐜荤拑 TabBar / 鑽父鎸夐挳 / 杩涘害鐜?/ 缁熻鍧?/ 鍒嗙粍澶?/ 楠ㄦ灦
+//
+//  Theme.swift — 设计系统（对标大厂：Apple HIG / Material 3 的层次与留白）
+//  玻璃卡片 / 玻璃 TabBar / 药丸按钮 / 进度环 / 统计块 / 分组头 / 骨架
 //
 
 import UIKit
 
-// MARK: - 璁捐浠ょ墝
+// MARK: - 设计令牌
 
 enum DS {
-    // 棰滆壊
+    // 颜色
     static let bg      = UIColor(red: 0.949, green: 0.953, blue: 0.961, alpha: 1)   // #F6F7F8
     static let label   = UIColor(red: 0.06, green: 0.07, blue: 0.08, alpha: 1)
     static let label2  = UIColor(red: 0.36, green: 0.39, blue: 0.42, alpha: 1)
     static let label3  = UIColor(red: 0.60, green: 0.62, blue: 0.65, alpha: 1)
-    static let accent  = UIColor(red: 0.10, green: 0.45, blue: 0.40, alpha: 1)      // 澧ㄧ豢
+    static let accent  = UIColor(red: 0.10, green: 0.45, blue: 0.40, alpha: 1)      // 墨绿
     static let accentLo = UIColor(red: 0.85, green: 0.93, blue: 0.92, alpha: 1)
     static let danger  = UIColor(red: 0.74, green: 0.22, blue: 0.22, alpha: 1)
     static let ok      = UIColor(red: 0.16, green: 0.72, blue: 0.51, alpha: 1)
     static let hair    = UIColor(white: 0, alpha: 0.05)
 
-    // 鍦嗚 / 闂磋窛
+    // 圆角 / 间距
     static let r: CGFloat = 26
     static let rSmall: CGFloat = 18
     static let pad: CGFloat = 20
     static let gap: CGFloat = 14
 
-    // 瀛椾綋
+    // 字体
     static func h1(_ s: CGFloat = 34) -> UIFont { .systemFont(ofSize: s, weight: .bold) }
     static func h2(_ s: CGFloat = 22) -> UIFont { .systemFont(ofSize: s, weight: .semibold) }
     static func body(_ s: CGFloat = 16) -> UIFont { .systemFont(ofSize: s, weight: .regular) }
@@ -32,7 +33,8 @@ enum DS {
     static func cap(_ s: CGFloat = 12) -> UIFont { .systemFont(ofSize: s, weight: .medium) }
 }
 
-// MARK: - 鐜荤拑鍗＄墖锛堥珮鏂ā绯?+ 娓愬彉鎻忚竟 + 鍐呭楂樺厜锛?
+// MARK: - 玻璃卡片（高斯模糊 + 渐变描边 + 内外高光）
+
 final class GlassCard: UIView {
     private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialLight))
     private let rim  = CAGradientLayer()
@@ -84,7 +86,7 @@ final class GlassCard: UIView {
     }
 }
 
-// MARK: - 鑽父鎸夐挳
+// MARK: - 药丸按钮
 
 final class PillButton: UIControl {
     enum Kind { case primary, secondary, danger, plain }
@@ -173,7 +175,8 @@ final class PillButton: UIControl {
     func setTitle(_ t: String) { lbl.text = t }
 }
 
-// MARK: - 杩涘害鐜?
+// MARK: - 进度环
+
 final class RingView: UIView {
     private let track = CAShapeLayer()
     private let arc = CAShapeLayer()
@@ -203,12 +206,12 @@ final class RingView: UIView {
         big.font = DS.mono(30)
         big.textColor = DS.label
         big.textAlignment = .center
-        big.text = "鈥?
+        big.text = "—"
         addSubview(big)
         small.font = DS.cap(11)
         small.textColor = DS.label3
         small.textAlignment = .center
-        small.text = "鍓╀綑"
+        small.text = "剩余"
         addSubview(small)
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -239,7 +242,8 @@ final class RingView: UIView {
     }
 }
 
-// MARK: - 缁熻鍧?
+// MARK: - 统计块
+
 final class StatTile: UIView {
     private let v = UILabel()
     private let k = UILabel()
@@ -283,7 +287,7 @@ final class StatTile: UIView {
     func set(_ n: Int) { v.text = n > 9999 ? "\(n / 1000)k" : "\(n)" }
 }
 
-// MARK: - 鐜荤拑 TabBar
+// MARK: - 玻璃 TabBar
 
 final class GlassTabBar: UIView {
     private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterialLight))
@@ -399,7 +403,7 @@ final class GlassTabBar: UIView {
     }
 }
 
-// MARK: - 鍒嗙粍鏍囬
+// MARK: - 分组标题
 
 final class SectionHeader: UIView {
     init(_ title: String, subtitle: String? = nil) {
@@ -433,7 +437,8 @@ final class SectionHeader: UIView {
     required init?(coder: NSCoder) { fatalError() }
 }
 
-// MARK: - 鎻愮ず锛圱oast锛?
+// MARK: - 提示（Toast）
+
 enum HUD {
     static func toast(_ msg: String, ok: Bool = true) {
         DispatchQueue.main.async {
@@ -480,11 +485,11 @@ enum HUD {
     }
 }
 
-// MARK: - 宸ュ叿
+// MARK: - 工具
 
 enum Fmt {
     static func date(_ ms: Int64) -> String {
-        guard ms > 0 else { return "鈥? }
+        guard ms > 0 else { return "—" }
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm"
         return f.string(from: Date(timeIntervalSince1970: Double(ms) / 1000))
@@ -499,13 +504,13 @@ enum Fmt {
     }
     static func leftUnit(_ leftMs: Int64) -> String {
         let sec = Int(max(0, leftMs) / 1000)
-        if sec / 86400 > 0 { return "澶? }
-        if sec / 3600 > 0 { return "鏃? }
-        return "鍒?
+        if sec / 86400 > 0 { return "天" }
+        if sec / 3600 > 0 { return "时" }
+        return "分"
     }
 }
 
-// MARK: - 瑙勫垯缁熻
+// MARK: - 规则统计
 
 enum RuleStats {
     struct R { var ip = 0; var port = 0; var dom = 0; var kw = 0 }
@@ -513,12 +518,9 @@ enum RuleStats {
     static func parse(_ text: String) -> R {
         var r = R()
         var sec = ""
-        // 鍘绘帀鍙兘瀛樺湪鐨?BOM锛屽苟缁熶竴鎹㈣
         var t = text
         if t.hasPrefix("\u{FEFF}") { t = String(t.dropFirst()) }
-        t = t.replacingOccurrences(of: "\r\n", with: "\n")
-        t = t.replacingOccurrences(of: "\r", with: "\n")
-
+        t = t.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
         for raw in t.components(separatedBy: "\n") {
             let l = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             if l.isEmpty { continue }
@@ -527,16 +529,11 @@ enum RuleStats {
                 continue
             }
             switch sec {
-            case "V4", "V6":
-                r.ip += 1
-            case "PORTS":
-                r.port += l.split(separator: ",").filter { !$0.isEmpty }.count
-            case "DOMAINS":
-                r.dom += 1
-            case "KW":
-                r.kw += 1
-            default:
-                break
+            case "V4", "V6": r.ip += 1
+            case "PORTS": r.port += l.split(separator: ",").filter { !$0.isEmpty }.count
+            case "DOMAINS": r.dom += 1
+            case "KW": r.kw += 1
+            default: break
             }
         }
         return r
