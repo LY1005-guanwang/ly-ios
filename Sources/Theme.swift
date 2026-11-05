@@ -514,20 +514,37 @@ enum Fmt {
 
 enum RuleStats {
     struct R { var ip = 0; var port = 0; var dom = 0; var kw = 0 }
-    static func parse(_ t: String) -> R {
-        var r = R(); var sec = ""
+
+    static func parse(_ text: String) -> R {
+        var r = R()
+        var sec = ""
+        // 去掉可能存在的 BOM，并统一换行
+        var t = text
+        if t.hasPrefix("\u{FEFF}") { t = String(t.dropFirst()) }
+        t = t.replacingOccurrences(of: "\r\n", with: "\n")
+        t = t.replacingOccurrences(of: "\r", with: "\n")
+
         for raw in t.components(separatedBy: "\n") {
-            let l = raw.trimmingCharacters(in: .whitespaces)
+            let l = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             if l.isEmpty { continue }
-            if l.hasPrefix("#") { sec = String(l.dropFirst()).uppercased(); continue }
+            if l.hasPrefix("#") {
+                sec = String(l.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                continue
+            }
             switch sec {
-            case "V4", "V6": r.ip += 1
-            case "PORTS": r.port += l.split(separator: ",").count
-            case "DOMAINS": r.dom += 1
-            case "KW": r.kw += 1
-            default: break
+            case "V4", "V6":
+                r.ip += 1
+            case "PORTS":
+                r.port += l.split(separator: ",").filter { !$0.isEmpty }.count
+            case "DOMAINS":
+                r.dom += 1
+            case "KW":
+                r.kw += 1
+            default:
+                break
             }
         }
         return r
     }
+}
 }
