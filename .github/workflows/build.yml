@@ -30,45 +30,66 @@ jobs:
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           echo "$THEOS/bin" >> $GITHUB_PATH
           brew install ldid >/dev/null 2>&1 || true
-          which ldid || echo 'ldid missing'
+          (which ldid && echo "ldid ok") || echo "ldid missing"
 
       - name: Build app and tunnel extension
         run: |
-          make clean all -j4 2>&1 | tail -40
-          ( cd tunnel && make clean all -j4 2>&1 | tail -20 ) || true
+          make clean all -j4 2>&1 | tail -30
+          ( cd tunnel && make clean all -j4 2>&1 | tail -30 ) || true
 
-      - name: Assemble unsigned Payload IPA
+      - name: Assemble Payload IPA
         run: |
+          set -e
           APP=$(find . -maxdepth 6 -type d -name "LyInternal.app" | head -1)
           APPEX=$(find . -maxdepth 6 -type d -name "LyTunnel.appex" | head -1)
-          echo "APP=$APP"; echo "APPEX=$APPEX"
+          echo "APP=$APP"
+          echo "APPEX=$APPEX"
           test -n "$APP"
+
           rm -rf Payload LyInternal.ipa
           mkdir -p Payload
           cp -R "$APP" Payload/
+          rm -rf Payload/LyInternal.app/_CodeSignature Payload/LyInternal.app/CodeResources || true
+
           mkdir -p Payload/LyInternal.app/PlugIns
           if [ -n "$APPEX" ]; then
             cp -R "$APPEX" Payload/LyInternal.app/PlugIns/
-            # lytunnel_fix: appex 只能用 LyTunnel 的 Info.plist，且只保留 LyTunnel 二进制
-            APPEXDIR="Payload/LyInternal.app/PlugIns/LyTunnel.appex"
-            cp Resources/tunnel-Info.plist "$APPEXDIR/Info.plist"
-            rm -f "$APPEXDIR/LyInternal" "$APPEXDIR/ly_pub.pem" 2>/dev/null || true
-            echo "--- appex 内容 ---"
-            ls -la "$APPEXDIR"
-            plutil -p "$APPEXDIR/Info.plist" | grep -E "CFBundleExecutable|CFBundleIdentifier" || true
           fi
-          if [ -f Resources/ly_pub.pem ]; then cp Resources/ly_pub.pem Payload/LyInternal.app/; fi
-          # 清理可能残留的签名，交给安装工具去签
-          rm -rf Payload/LyInternal.app/_CodeSignature Payload/LyInternal.app/CodeResources 2>/dev/null || true
-          rm -rf Payload/LyInternal.app/PlugIns/LyTunnel.appex/_CodeSignature 2>/dev/null || true
-          chmod 755 "Payload/LyInternal.app/LyInternal"
+          APPDIR="Payload/LyInternal.app"
+          APPEXDIR="$APPDIR/PlugIns/LyTunnel.appex"
+
+          if [ -d "$APPEXDIR" ]; then
+            cp Resources/tunnel-Info.plist "$APPEXDIR/Info.plist"
+            rm -f "$APPEXDIR/LyInternal" "$APPEXDIR/ly_pub.pem" || true
+            rm -rf "$APPEXDIR/_CodeSignature" || true
+            echo "--- appex contents ---"
+            ls -la "$APPEXDIR"
+            echo "--- appex plist ---"
+            plutil -p "$APPEXDIR/Info.plist" | egrep "CFBundleExecutable|NSExtensionPrincipalClass|NSExtensionPointIdentifier" || true
+          fi
+
+          if [ -f Resources/ly_pub.pem ]; then cp Resources/ly_pub.pem "$APPDIR/"; fi
+          chmod 755 "$APPDIR/LyInternal"
+
           if command -v ldid >/dev/null 2>&1; then
-            ldid -Sly_internal.entitlements "Payload/LyInternal.app/LyInternal" 2>/dev/null || echo "ldid app failed (ignored)"
-            if [ -f "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" ]; then
-              ldid -Sly_internal.entitlements "Payload/LyInternal.app/PlugIns/LyTunnel.appex/LyTunnel" 2>/dev/null || echo "ldid appex failed (ignored)"
+            ldid -Sly_internal.entitlements "$APPDIR/LyInternal" || echo "ldid app failed"
+            if [ -d "$APPEXDIR" ]; then
+              chmod 755 "$APPEXDIR/LyTunnel"
+              ldid -Sly_internal.entitlements "$APPEXDIR/LyTunnel" || echo "ldid appex failed"
             fi
           fi
-          lipo -info "Payload/LyInternal.app/LyInternal" || true
+
+          echo "=== VERIFY entitlements (app) ==="
+          ldid -e "$APPDIR/LyInternal" 2>/dev/null | egrep -A2 "networkextension|platform-application" || echo "(none)"
+          if [ -d "$APPEXDIR" ]; then
+            echo "=== VERIFY entitlements (appex) ==="
+            ldid -e "$APPEXDIR/LyTunnel" 2>/dev/null | egrep -A2 "networkextension|platform-application" || echo "(none)"
+          fi
+
+          echo "=== VERIFY binaries ==="
+          file "$APPDIR/LyInternal" || true
+          if [ -d "$APPEXDIR" ]; then file "$APPEXDIR/LyTunnel" || true; fi
+
           zip -qr LyInternal.ipa Payload
           ls -lh LyInternal.ipa
 
@@ -94,7 +115,7 @@ jobs:
               sha = json.load(urllib.request.urlopen(req, timeout=30))['sha']
           except Exception:
               sha = None
-          p = {'message': 'publish unsigned ipa', 'content': data}
+          p = {'message': 'publish ipa', 'content': data}
           if sha: p['sha'] = sha
           req = urllib.request.Request(url, data=json.dumps(p).encode(), method='PUT', headers=hdr)
           urllib.request.urlopen(req, timeout=180).read()
