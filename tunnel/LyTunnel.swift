@@ -1,12 +1,15 @@
 //
-//  LyTunnel.swift — Network Extension 主体（打包成 LyInternal.app/PlugIns/LyTunnel.appex）
-//  只做「按规则丢弃出站包」，不读内存、不注入
+//  LyTunnel.swift — NEPacketTunnelProvider
+//  - explicit @objc name for NSExtensionPrincipalClass
+//  - full logging + error propagation so the app can show the real reason
+//  - packets filtered by dst IP / CIDR / port (no memory hooks)
 //
 
 import Foundation
 import NetworkExtension
 import Darwin
 
+@objc(LyTunnelProvider)
 final class LyTunnelProvider: NEPacketTunnelProvider {
 
     private var ipSet = Set<UInt32>()
@@ -14,21 +17,33 @@ final class LyTunnelProvider: NEPacketTunnelProvider {
     private var ports = Set<UInt16>()
     private var domains = Set<String>()
     private var keywords = [String]()
+
     private var blockedCount = 0
     private var totalCount = 0
 
     override func startTunnel(options: [String: NSObject]?,
                              completionHandler: @escaping (Error?) -> Void) {
+        NSLog("[LY] startTunnel begin")
         loadRules()
-        let s = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: "10.7.0.1")
+
+        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: "10.7.0.1")
         let v4 = NEIPv4Settings(addresses: ["10.7.0.2"], subnetMasks: ["255.255.255.0"])
         v4.includedRoutes = [NEIPv4Route.default()]
-        s.ipv4Settings = v4
-        s.dnsSettings = NEDNSSettings(servers: ["223.5.5.5", "119.29.29.29"])
-        s.mtu = 1500
-        setTunnelNetworkSettings(s) { err in
-            if err == nil { self.pump() }
-            completionHandler(err)
+        settings.ipv4Settings = v4
+        settings.dnsSettings = NEDNSSettings(servers: ["223.5.5.5", "119.29.29.29"])
+        settings.mtu = 1500
+
+        setTunnelNetworkSettings(settings) { err in
+            if let e = err {
+                NSLog("[LY] setTunnelNetworkSettings failed: %@", e.localizedDescription)
+                completionHandler(e)
+                return
+            }
+            NSLog("[LY] up ip=%d cidr=%d port=%d dom=%d kw=%d",
+                  self.ipSet.count, self.cidrs.count, self.ports.count,
+                  self.domains.count, self.keywords.count)
+            completionHandler(nil)
+            self.pump()
         }
     }
 
@@ -39,37 +54,51 @@ final class LyTunnelProvider: NEPacketTunnelProvider {
     }
 
     private func loadRules() {
-        let cfg = (protocolConfiguration as? NETunnelProviderProtocol)?.providerConfiguration
-        var text = (cfg?["rules"] as? String) ?? ""
-        if text.isEmpty {
-            let url = FileManager.default.containerURL(
-                forSecurityApplicationGroupIdentifier: "group.com.ly.neizhi.ios")?
-                .appendingPathComponent("rules.txt")
-            if let u = url { text = (try? String(contentsOf: u, encoding: .utf8)) ?? "" }
+        var text = ""
+        if let cfg = (protocolConfiguration as? NETunnelProviderProtocol)?.providerConfiguration,
+           let s = cfg["rules"] as? String, !s.isEmpty {
+            text = s
+            NSLog("[LY] rules from providerConfiguration")
+        } else if let url = FileManager.default.containerURL(
+                    forSecurityApplicationGroupIdentifier: "group.com.ly.neizhi.ios")?
+                    .appendingPathComponent("rules.txt"),
+                  let s = try? String(contentsOf: url, encoding: .utf8) {
+            text = s
+            NSLog("[LY] rules from app group")
+        } else {
+            NSLog("[LY] WARN no rules, pass all")
         }
+
         var sec = ""
         for raw in text.components(separatedBy: "\n") {
-            let l = raw.trimmingCharacters(in: .whitespaces)
+            let l = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             if l.isEmpty { continue }
-            if l.hasPrefix("#") { sec = String(l.dropFirst()).uppercased(); continue }
+            if l.hasPrefix("#") {
+                sec = String(l.dropFirst()).uppercased()
+                continue
+            }
             switch sec {
             case "V4":
                 if l.contains("/") {
                     let p = l.split(separator: "/")
-                    if p.count == 2, let ip = Self.ip(String(p[0])), let m = UInt32(p[1]), m <= 32 {
+                    if p.count == 2, let ip = LyTunnelProvider.ip(String(p[0])),
+                       let m = UInt32(p[1]), m <= 32 {
                         let mask: UInt32 = m == 0 ? 0 : ~UInt32(0) << (32 - m)
                         cidrs.append((ip & mask, mask))
                     }
-                } else if let ip = Self.ip(l) { ipSet.insert(ip) }
+                } else if let ip = LyTunnelProvider.ip(l) {
+                    ipSet.insert(ip)
+                }
             case "PORTS":
                 for t in l.split(separator: ",") { if let p = UInt16(t) { ports.insert(p) } }
-            case "KW": keywords.append(l.lowercased())
-            case "DOMAINS": domains.insert(l.lowercased())
-            default: break
+            case "KW":
+                keywords.append(l.lowercased())
+            case "DOMAINS":
+                domains.insert(l.lowercased())
+            default:
+                break
             }
         }
-        NSLog("[LY] rules ip=%d cidr=%d ports=%d dom=%d kw=%d",
-              ipSet.count, cidrs.count, ports.count, domains.count, keywords.count)
     }
 
     private static func ip(_ s: String) -> UInt32? {
