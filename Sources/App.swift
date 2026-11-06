@@ -683,7 +683,8 @@ final class SettingsPage: BasePage {
 
 // MARK: - 玻璃输入框
 
-final class GlassField: UIView, UITextFieldDelegate {
+final class GlassField: UIView {
+    // 保守实现：不用 delegate、不做子类化、不用 blur，尽量只依赖 UITextField 原生路径
     private let field = UITextField()
     private let icon = UIImageView()
     var text: String { field.text ?? "" }
@@ -691,24 +692,32 @@ final class GlassField: UIView, UITextFieldDelegate {
 
     init(symbol: String, placeholder: String, secure: Bool = false) {
         super.init(frame: .zero)
-        backgroundColor = UIColor(white: 1, alpha: 0.9)
+        backgroundColor = UIColor(white: 1, alpha: 0.92)
         layer.cornerRadius = 16
-        layer.cornerCurve = .continuous
+        if #available(iOS 13.0, *) { layer.cornerCurve = .continuous }
         layer.borderWidth = 1
-        layer.borderColor = UIColor(white: 0.92, alpha: 1).cgColor
+        layer.borderColor = UIColor(white: 0.90, alpha: 1).cgColor
 
-        icon.image = UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 15, weight: .medium))
+        icon.image = UIImage(systemName: symbol)
         icon.tintColor = DS.label3
         icon.contentMode = .scaleAspectFit
+        icon.isUserInteractionEnabled = false
         addSubview(icon)
 
-        field.font = DS.body(16)
+        field.font = UIFont.systemFont(ofSize: 16)
         field.textColor = DS.label
         field.placeholder = placeholder
         field.isSecureTextEntry = secure
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
-        field.delegate = self
+        field.spellCheckingType = .no
+        field.smartQuotesType = .no
+        field.smartDashesType = .no
+        field.smartInsertDeleteType = .no
+        field.keyboardType = .asciiCapable
+        field.clearButtonMode = .never
+        field.returnKeyType = .done
+        field.isUserInteractionEnabled = true
         addSubview(field)
 
         icon.translatesAutoresizingMaskIntoConstraints = false
@@ -725,14 +734,5 @@ final class GlassField: UIView, UITextFieldDelegate {
             field.heightAnchor.constraint(equalToConstant: 40)
         ])
     }
-    required init?(coder: NSCoder) { fatalError() }
-
-    func textFieldDidBeginEditing(_ t: UITextField) {
-        layer.borderColor = DS.accent.withAlphaComponent(0.55).cgColor
-        backgroundColor = .white
-    }
-    func textFieldDidEndEditing(_ t: UITextField) {
-        layer.borderColor = UIColor(white: 0.92, alpha: 1).cgColor
-        backgroundColor = UIColor(white: 1, alpha: 0.9)
-    }
+    required init?(coder: NSCoder) { return nil }
 }
