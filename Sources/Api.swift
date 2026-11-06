@@ -33,17 +33,31 @@ enum Settings {
 }
 
 enum Session {
+    // TrollStore/自签环境下 Keychain 常返回 -34018，因此改为 UserDefaults 为主、Keychain 兜底
+    private static let udKey = "ly.session.v1"
     private static let svc = "com.ly.neizhi.ios"
     private static let acc = "session"
 
     private struct Box: Codable { var token: String; var user: String; var expireAt: Int64 }
 
     private static func read() -> Box? {
-        guard let data = Keychain.get(service: svc, account: acc) else { return nil }
-        return try? JSONDecoder().decode(Box.self, from: data)
+        if let d = UserDefaults.standard.data(forKey: udKey),
+           let b = try? JSONDecoder().decode(Box.self, from: d), b.token.count > 0 {
+            return b
+        }
+        if let data = Keychain.get(service: svc, account: acc),
+           let b = try? JSONDecoder().decode(Box.self, from: data), b.token.count > 0 {
+            write(b)                       // 顺手迁移到 UserDefaults
+            return b
+        }
+        return nil
     }
+
     private static func write(_ b: Box) {
-        if let d = try? JSONEncoder().encode(b) { Keychain.set(service: svc, account: acc, data: d) }
+        guard let d = try? JSONEncoder().encode(b) else { return }
+        UserDefaults.standard.set(d, forKey: udKey)
+        UserDefaults.standard.synchronize()
+        Keychain.set(service: svc, account: acc, data: d)   // 双写，Keychain 失败也不影响
     }
 
     static var token: String { read()?.token ?? "" }
@@ -60,8 +74,13 @@ enum Session {
         b.expireAt = expireAt
         write(b)
     }
-    static func clear() { Keychain.del(service: svc, account: acc) }
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: udKey)
+        UserDefaults.standard.synchronize()
+        Keychain.del(service: svc, account: acc)
+    }
 }
+
 
 enum Keychain {
     static func set(service: String, account: String, data: Data) {
