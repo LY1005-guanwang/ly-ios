@@ -7,8 +7,6 @@
     <array><string>packet-tunnel-provider</string></array>
     <key>com.apple.security.application-groups</key>
     <array><string>group.com.ly.neizhi.ios</string></array>
-    <key>platform-application</key><true/>
     <key>get-task-allow</key><false/>
-    <key>com.apple.private.security.no-sandbox</key><true/>
 </dict>
 </plist>
