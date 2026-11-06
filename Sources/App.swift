@@ -194,6 +194,11 @@ final class HomePage: BasePage {
         reload()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        reload()
+    }
+
     private func buildHero() {
         hero.heightAnchor.constraint(equalToConstant: 188).isActive = true
         add(hero)
