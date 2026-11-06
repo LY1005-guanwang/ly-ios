@@ -751,6 +751,9 @@ final class GlassField: UIView {
         field.smartQuotesType = .no
         field.smartDashesType = .no
         field.smartInsertDeleteType = .no
+        let pad = ASCIIKeypad()
+        pad.target = field
+        field.inputView = pad
         field.keyboardType = .asciiCapable
         field.clearButtonMode = .never
         field.returnKeyType = .done
