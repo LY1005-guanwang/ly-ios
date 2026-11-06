@@ -1,0 +1,83 @@
+workflows:
+  ly-ios-ipa:
+    name: LY 内部 iOS 编译
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      xcode: latest
+      vars:
+        THEOS: $HOME/theos
+    scripts:
+      - name: 安装 ldid
+        script: |
+          brew install ldid || true
+          which ldid && ldid -h >/dev/null 2>&1 || echo "ldid missing"
+
+      - name: 准备 Theos + iOS SDK
+        script: |
+          set -e
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS" || true
+          mkdir -p "$THEOS/sdks"
+          if ! ls "$THEOS"/sdks/*.sdk >/dev/null 2>&1; then
+            curl -L --retry 3 https://github.com/theos/sdks/archive/refs/heads/master.tar.gz -o /tmp/sdks.tgz
+            tar xzf /tmp/sdks.tgz -C /tmp
+            cp -R /tmp/sdks-master/*.sdk "$THEOS/sdks/" || true
+          fi
+          export PATH="$THEOS/bin:$PATH"
+          echo "SDK: $(ls $THEOS/sdks | tr '\n' ' ')"
+
+      - name: 编译主程序与隧道扩展
+        script: |
+          set -e
+          export PATH="$THEOS/bin:$PATH"
+          make clean all -j4
+          ( cd tunnel && make clean all -j4 )
+
+      - name: 组装 Payload 并注入 entitlements
+        script: |
+          set -e
+          export PATH="$THEOS/bin:$PATH"
+          APP=$(find . -maxdepth 6 -type d -name "LyInternal.app" | head -1)
+          APPEX=$(find . -maxdepth 6 -type d -name "LyTunnel.appex" | head -1)
+          echo "APP=$APP"; echo "APPEX=$APPEX"
+          test -n "$APP"
+          rm -rf Payload LyInternal.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          rm -rf Payload/LyInternal.app/_CodeSignature Payload/LyInternal.app/CodeResources 2>/dev/null || true
+          mkdir -p Payload/LyInternal.app/PlugIns
+          [ -n "$APPEX" ] && cp -R "$APPEX" Payload/LyInternal.app/PlugIns/
+          APPDIR="Payload/LyInternal.app"
+          APPEXDIR="$APPDIR/PlugIns/LyTunnel.appex"
+          if [ -d "$APPEXDIR" ]; then
+            cp Resources/tunnel-Info.plist "$APPEXDIR/Info.plist"
+            rm -f "$APPEXDIR/LyInternal" "$APPEXDIR/ly_pub.pem" 2>/dev/null || true
+            rm -rf "$APPEXDIR/_CodeSignature"
+            plutil -p "$APPEXDIR/Info.plist" | egrep "CFBundleExecutable|NSExtensionPrincipalClass" || true
+          fi
+          [ -f Resources/ly_pub.pem ] && cp Resources/ly_pub.pem "$APPDIR/"
+          chmod 755 "$APPDIR/LyInternal"
+          ldid -Sly_internal.entitlements "$APPDIR/LyInternal" || echo "ldid app failed"
+          if [ -d "$APPEXDIR" ]; then
+            chmod 755 "$APPEXDIR/LyTunnel"
+            ldid -Sly_internal.entitlements "$APPEXDIR/LyTunnel" || echo "ldid appex failed"
+          fi
+          echo "=== entitlements (app) ==="
+          ldid -e "$APPDIR/LyInternal" || true
+          if [ -d "$APPEXDIR" ]; then
+            echo "=== entitlements (appex) ==="
+            ldid -e "$APPEXDIR/LyTunnel" || true
+          fi
+          zip -qr LyInternal.ipa Payload
+          ls -lh LyInternal.ipa
+
+    artifacts:
+      - LyInternal.ipa
+
+    publishing:
+      email:
+        recipients:
+          - ly1005@example.com
+        notify:
+          success: true
+          failure: true
