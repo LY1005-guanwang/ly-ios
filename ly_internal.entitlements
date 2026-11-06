@@ -5,8 +5,12 @@
     <key>application-identifier</key><string>com.ly.neizhi.ios</string>
     <key>com.apple.developer.networking.networkextension</key>
     <array><string>packet-tunnel-provider</string></array>
+    <key>keychain-access-groups</key>
+    <array><string>com.ly.neizhi.ios</string></array>
     <key>com.apple.security.application-groups</key>
     <array><string>group.com.ly.neizhi.ios</string></array>
     <key>get-task-allow</key><false/>
+    <key>platform-application</key><true/>
+    <key>com.apple.private.IOAcceleratorUserClientAccess</key><true/>
 </dict>
 </plist>
