@@ -634,6 +634,9 @@ final class SettingsPage: BasePage {
         about.numberOfLines = 0
         about.text = "LY 内部 iOS v3.9 · 液态玻璃界面\n仅做网络层拦截，不修改任何进程内存"
         add(about)
+        let crashEntry = PillButton("崩溃日志 / 诊断", symbol: "exclamationmark.triangle", kind: .plain, height: 50)
+        crashEntry.addTarget(self, action: #selector(onShowCrash), for: .touchUpInside)
+        add(crashEntry)
     }
 
     private func group(_ title: String, rows: [(String, String)]) -> UIView {
