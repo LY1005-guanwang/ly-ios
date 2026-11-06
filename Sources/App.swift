@@ -10,6 +10,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     func application(_ app: UIApplication,
                      didFinishLaunchingWithOptions opt: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        CrashLog.install()
         let w = UIWindow(frame: UIScreen.main.bounds)
         w.rootViewController = RootTabs()
         w.makeKeyAndVisible()
@@ -673,6 +674,39 @@ final class SettingsPage: BasePage {
             box.bottomAnchor.constraint(equalTo: c.bottomAnchor, constant: -16)
         ])
         return c
+    }
+
+    @objc private func onShowCrash() {
+        let t = CrashLog.last()
+        if t.isEmpty { HUD.toast("暂无崩溃记录", ok: true); return }
+        let head = StepTrace.last.isEmpty ? "" : "最后操作: " + StepTrace.last + "\n\n"
+        let vc = UIViewController()
+        vc.view.backgroundColor = DS.bg
+        vc.title = "崩溃日志"
+        let tv = UITextView()
+        tv.text = head + t
+        tv.font = UIFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        tv.textColor = DS.label
+        tv.backgroundColor = .white
+        tv.isEditable = false
+        tv.translatesAutoresizingMaskIntoConstraints = false
+        vc.view.addSubview(tv)
+        NSLayoutConstraint.activate([
+            tv.topAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            tv.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor, constant: 12),
+            tv.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor, constant: -12),
+            tv.bottomAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.bottomAnchor, constant: -8)
+        ])
+        let nav = UINavigationController(rootViewController: vc)
+        nav.navigationBar.tintColor = DS.accent
+        vc.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "复制全部", style: .plain,
+            target: self, action: #selector(onCopyCrash))
+        present(nav, animated: true)
+    }
+
+    @objc private func onCopyCrash() {
+        UIPasteboard.general.string = (StepTrace.last.isEmpty ? "" : "最后操作: " + StepTrace.last + "\n\n") + CrashLog.last()
+        HUD.toast("已复制到剪贴板")
     }
 
     @objc private func onClear() {
