@@ -1,7 +1,6 @@
 //
-//  CrashLog.swift — 内置崩溃捕获
-//  - 未捕获异常 + 信号（SIGABRT/SIGSEGV/...）都写盘
-//  - 下次启动在「设置」页显示，可复制
+//  CrashLog.swift — 内置崩溃捕获（无捕获闭包版，可编译）
+//  Swift 要求传给 NSSetUncaughtExceptionHandler / signal 的必须是顶层函数，不能捕获上下文
 //
 
 import Foundation
@@ -11,7 +10,6 @@ import Darwin
 enum CrashLog {
 
     static var fileURL: URL {
-        // 优先 Documents（TrollStore 装的应用有 no-sandbox 权限）
         if let d = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
             return d.appendingPathComponent("crash.log")
         }
@@ -19,49 +17,30 @@ enum CrashLog {
     }
 
     static func install() {
-        NSSetUncaughtExceptionHandler { ex in
-            let name = ex.name.rawValue
-            let reason = ex.reason ?? ""
-            var stack = ex.callStackSymbols.joined(separator: "\n")
-            if stack.count > 12000 { stack = String(stack.prefix(12000)) }
-            write("""
-            ==== NSException ====
-            time: \(stamp())
-            name: \(name)
-            reason: \(reason)
-            stack:
-            \(stack)
-            """, append: false)
-        }
-
+        NSSetUncaughtExceptionHandler(lyExceptionHandler)
         let signals: [Int32] = [SIGABRT, SIGILL, SIGSEGV, SIGFPE, SIGBUS, SIGPIPE, SIGTRAP]
         for s in signals {
-            signal(s, { sig in
-                var info = "==== Signal ====\ntime: \(stamp())\nsignal: \(sig)\n"
-                info += threadStack()
-                write(info, append: false)
-                // 恢复默认处理并重新抛出，保证系统日志也有
-                signal(sig, SIG_DFL)
-                raise(sig)
-            })
+            signal(s, lySignalHandler)
         }
     }
 
-    private static func stamp() -> String {
+    static func stamp() -> String {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return f.string(from: Date())
     }
 
-    private static func threadStack() -> String {
+    static func threadStack() -> String {
         let count = 64
         let ptrs = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: count)
         defer { ptrs.deallocate() }
         let n = backtrace(ptrs, Int32(count))
         guard let syms = backtrace_symbols(ptrs, n) else { return "(no symbols)" }
         var out = ""
-        for i in 0..<Int(n) {
+        var i = 0
+        while i < Int(n) {
             if let c = syms[i] { out += String(cString: c) + "\n" }
+            i += 1
         }
         free(syms)
         if out.count > 12000 { out = String(out.prefix(12000)) }
@@ -70,18 +49,15 @@ enum CrashLog {
 
     static func write(_ text: String, append: Bool) {
         let line = text.hasSuffix("\n") ? text : text + "\n"
-        do {
-            if append, FileManager.default.fileExists(atPath: fileURL.path),
-               let h = try? FileHandle(forWritingTo: fileURL) {
-                h.seekToEndOfFile()
-                h.write(line.data(using: .utf8) ?? Data())
-                try? h.close()
-            } else {
-                try line.write(to: fileURL, atomically: true, encoding: .utf8)
-            }
-        } catch {
-            NSLog("[LY] crash log write failed: %@", error.localizedDescription)
+        let url = fileURL
+        if append, FileManager.default.fileExists(atPath: url.path),
+           let h = try? FileHandle(forWritingTo: url) {
+            h.seekToEndOfFile()
+            h.write(line.data(using: .utf8) ?? Data())
+            try? h.close()
+            return
         }
+        try? line.write(to: url, atomically: true, encoding: .utf8)
     }
 
     static func last() -> String {
@@ -93,12 +69,28 @@ enum CrashLog {
     }
 }
 
-/// 记录最近一次「正在做的事」，崩溃时一起写下来，便于定位步骤
+// MARK: - C 函数指针（必须是无捕获的顶层函数）
+
+func lyExceptionHandler(_ ex: NSException) {
+    var stack = ex.callStackSymbols.joined(separator: "\n")
+    if stack.count > 12000 { stack = String(stack.prefix(12000)) }
+    let text = "==== NSException ====\ntime: \(CrashLog.stamp())\nname: \(ex.name.rawValue)\nreason: \(ex.reason ?? "")\nstep: \(StepTrace.last)\nstack:\n\(stack)\n"
+    CrashLog.write(text, append: false)
+}
+
+func lySignalHandler(_ sig: Int32) {
+    let text = "==== Signal ====\ntime: \(CrashLog.stamp())\nsignal: \(sig)\nstep: \(StepTrace.last)\nstack:\n\(CrashLog.threadStack())\n"
+    CrashLog.write(text, append: false)
+    signal(sig, SIG_DFL)
+    raise(sig)
+}
+
+/// 记录最近一次操作，崩溃时一起写盘
 enum StepTrace {
     private static let key = "ly.laststep"
+
     static func mark(_ s: String) {
         UserDefaults.standard.set("\(s) @ \(Date())", forKey: key)
-        CrashLog.write("[step] \(s)", append: true)
     }
     static var last: String { UserDefaults.standard.string(forKey: key) ?? "" }
 }
