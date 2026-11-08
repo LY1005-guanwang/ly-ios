@@ -111,12 +111,34 @@ enum Keychain {
 }
 
 enum RuleStore {
-    private static var url: URL {
+    // UserDefaults 为主（不依赖沙箱/容器路径），Documents 文件作兜底
+    private static let key = "ly.rules.v1"
+    private static var fileURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("rules.txt")
     }
-    static func save(_ s: String) { try? s.write(to: url, atomically: true, encoding: .utf8) }
-    static func load() -> String { (try? String(contentsOf: url, encoding: .utf8)) ?? "" }
+
+    static func save(_ s: String) {
+        guard !s.isEmpty else { return }
+        UserDefaults.standard.set(s, forKey: key)
+        UserDefaults.standard.synchronize()
+        try? s.write(to: fileURL, atomically: true, encoding: .utf8)   // 兜底，失败无所谓
+    }
+
+    static func load() -> String {
+        if let s = UserDefaults.standard.string(forKey: key), !s.isEmpty { return s }
+        if let s = try? String(contentsOf: fileURL, encoding: .utf8), !s.isEmpty {
+            UserDefaults.standard.set(s, forKey: key)                  // 迁移
+            return s
+        }
+        return ""
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.synchronize()
+        try? FileManager.default.removeItem(at: fileURL)
+    }
 }
 
 // MARK: - 设备标识
