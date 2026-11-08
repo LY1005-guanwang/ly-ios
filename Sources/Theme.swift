@@ -373,7 +373,7 @@ final class GlassTabBar: UIView {
         super.layoutSubviews()
         blur.frame = bounds
         guard !items.isEmpty else { return }
-        let w = bounds.width / CGFloat(items.count)
+        _ = bounds.width / CGFloat(items.count)
         let b = items[current]
         indicator.frame = CGRect(x: b.frame.midX - 26, y: 2, width: 52, height: bounds.height - 4)
     }
