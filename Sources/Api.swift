@@ -231,7 +231,7 @@ enum RuleSets {
     }
 
     static func name(of id: Int) -> String {
-        return id == 2 ? "\u89c4\u5219B \u00b7 \u5b89\u9759\u6a21\u5f0f" : "\u89c4\u5219A \u00b7 \u5168\u91cf\u62e6\u622a"
+        return id == 2 ? "\u{89c4}\u{5219}B \u{00b7} \u{5b89}\u{9759}\u{6a21}\u{5f0f}" : "\u{89c4}\u{5219}A \u{00b7} \u{5168}\u{91cf}\u{62e6}\u{622a}"
     }
 
     /// 拉目录（失败返回内置两条，保证有弹窗可用）
@@ -257,8 +257,8 @@ enum RuleSets {
                 }
             }
             if list.isEmpty {
-                list = [RuleSetInfo(id: 1, name: "\u89c4\u5219A \u00b7 \u5168\u91cf\u62e6\u622a", desc: "\u6e38\u620f/\u5e7f\u544a/\u7edf\u8ba1 \u5168\u91cf\u62e6\u622a", ready: true),
-                        RuleSetInfo(id: 2, name: "\u89c4\u5219B \u00b7 \u5b89\u9759\u6a21\u5f0f", desc: "\u53ea\u62e6\u53cd\u4f5c\u5f0a\u3001\u516c\u544a\u5f39\u7a97", ready: true)]
+                list = [RuleSetInfo(id: 1, name: "\u{89c4}\u{5219}A \u{00b7} \u{5168}\u{91cf}\u{62e6}\u{622a}", desc: "\u{6e38}\u{620f}/\u{5e7f}\u{544a}/\u{7edf}\u{8ba1} \u{5168}\u{91cf}\u{62e6}\u{622a}", ready: true),
+                        RuleSetInfo(id: 2, name: "\u{89c4}\u{5219}B \u{00b7} \u{5b89}\u{9759}\u{6a21}\u{5f0f}", desc: "\u{53ea}\u{62e6}\u{53cd}\u{4f5c}\u{5f0a}\u{3001}\u{516c}\u{544a}\u{5f39}\u{7a97}", ready: true)]
             }
             DispatchQueue.main.async { done(list) }
         }.resume()
