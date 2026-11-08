@@ -470,7 +470,7 @@ final class RulesPage: BasePage {
     private let tKw = StatTile(key: "关键字", symbol: "text.magnifyingglass")
     private let syncB = PillButton("拉取云端规则", symbol: "arrow.down.circle", height: 54)
 
-    private let modeB = PillButton("\u89c4\u5219\u6a21\u5f0f", symbol: "square.stack.3d.up", kind: .plain, height: 44)
+    private let modeB = PillButton("\u{89c4}\u{5219}\u{6a21}\u{5f0f}", symbol: "square.stack.3d.up", kind: .plain, height: 44)
     private let catCard = GlassCard()
     private let swIp = UISwitch()
     private let swPort = UISwitch()
@@ -585,7 +585,7 @@ final class RulesPage: BasePage {
         RuleSets.fetch { list in
 
 
-            let sheet = UIAlertController(title: "\u9009\u62e9\u89c4\u5219\u6a21\u5f0f", message: nil, preferredStyle: .actionSheet)
+            let sheet = UIAlertController(title: "\u{9009}\u{62e9}\u{89c4}\u{5219}\u{6a21}\u{5f0f}", message: nil, preferredStyle: .actionSheet)
 
 
             for it in list {
@@ -600,7 +600,7 @@ final class RulesPage: BasePage {
                     RuleSets.current = it.id
 
 
-                    HUD.toast("\u5df2\u5207\u6362\u5230 " + it.name)
+                    HUD.toast("\u{5df2}\u{5207}\u{6362}\u{5230} " + it.name)
 
 
                     self.onSync()
@@ -615,7 +615,7 @@ final class RulesPage: BasePage {
             }
 
 
-            sheet.addAction(UIAlertAction(title: "\u53d6\u6d88", style: .cancel, handler: nil))
+            sheet.addAction(UIAlertAction(title: "\u{53d6}\u{6d88}", style: .cancel, handler: nil))
 
 
             if let pop = sheet.popoverPresentationController {
