@@ -6,6 +6,7 @@ workflows:
     environment:
       xcode: latest
       vars:
+        TZ: Asia/Shanghai
         THEOS: $HOME/theos
     scripts:
       - name: 安装 ldid
@@ -73,11 +74,3 @@ workflows:
 
     artifacts:
       - LyInternal.ipa
-
-    publishing:
-      email:
-        recipients:
-          - ly1005@example.com
-        notify:
-          success: true
-          failure: true
