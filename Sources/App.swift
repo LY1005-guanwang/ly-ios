@@ -469,6 +469,8 @@ final class RulesPage: BasePage {
     private let tDom = StatTile(key: "域名", symbol: "globe")
     private let tKw = StatTile(key: "关键字", symbol: "text.magnifyingglass")
     private let syncB = PillButton("拉取云端规则", symbol: "arrow.down.circle", height: 54)
+
+    private let modeB = PillButton("\u89c4\u5219\u6a21\u5f0f", symbol: "square.stack.3d.up", kind: .plain, height: 44)
     private let catCard = GlassCard()
     private let swIp = UISwitch()
     private let swPort = UISwitch()
@@ -489,7 +491,7 @@ final class RulesPage: BasePage {
         tiles.distribution = .fillEqually
         [tIp, tPort, tDom, tKw].forEach { tiles.addArrangedSubview($0) }
 
-        let s = UIStackView(arrangedSubviews: [statusLB, tiles, syncB])
+        let s = UIStackView(arrangedSubviews: [statusLB, tiles, syncB, modeB])
         s.axis = .vertical
         s.spacing = 14
         card.addSubview(s)
@@ -532,6 +534,9 @@ final class RulesPage: BasePage {
         add(diag)
 
         syncB.addTarget(self, action: #selector(onSync), for: .touchUpInside)
+
+
+        modeB.addTarget(self, action: #selector(onPickRuleSet), for: .touchUpInside)
         refresh()
     }
 
@@ -573,6 +578,67 @@ final class RulesPage: BasePage {
     @objc private func catChanged() {
         HUD.toast("拦截范围已更新，重开拦截生效")
     }
+
+    @objc private func onPickRuleSet() {
+
+
+        RuleSets.fetch { list in
+
+
+            let sheet = UIAlertController(title: "\u9009\u62e9\u89c4\u5219\u6a21\u5f0f", message: nil, preferredStyle: .actionSheet)
+
+
+            for it in list {
+
+
+                let t = it.name + (it.desc.isEmpty ? "" : "\n" + it.desc)
+
+
+                let act = UIAlertAction(title: t, style: .default) { _ in
+
+
+                    RuleSets.current = it.id
+
+
+                    HUD.toast("\u5df2\u5207\u6362\u5230 " + it.name)
+
+
+                    self.onSync()
+
+
+                }
+
+
+                sheet.addAction(act)
+
+
+            }
+
+
+            sheet.addAction(UIAlertAction(title: "\u53d6\u6d88", style: .cancel, handler: nil))
+
+
+            if let pop = sheet.popoverPresentationController {
+
+
+                pop.sourceView = self.modeB
+
+
+                pop.sourceRect = self.modeB.bounds
+
+
+            }
+
+
+            self.present(sheet, animated: true)
+
+
+        }
+
+
+    }
+
+
 
     @objc private func onSync() {
         if !Session.logged {
