@@ -207,6 +207,64 @@ enum AccountApi {
 
 // MARK: - 云端规则
 
+/// 云端规则目录（服务端 /a/sets）
+struct RuleSetInfo {
+    var id: Int = 1
+    var name: String = ""
+    var desc: String = ""
+    var ready: Bool = false
+}
+
+enum RuleSets {
+    private static let key = "ly.ruleset"
+
+    static var current: Int {
+        get {
+            let v = UserDefaults.standard.integer(forKey: key)
+            return v >= 1 && v <= 9 ? v : 1
+        }
+        set {
+            let v = newValue >= 1 && newValue <= 9 ? newValue : 1
+            UserDefaults.standard.set(v, forKey: key)
+            UserDefaults.standard.synchronize()
+        }
+    }
+
+    static func name(of id: Int) -> String {
+        return id == 2 ? "\u89c4\u5219B \u00b7 \u5b89\u9759\u6a21\u5f0f" : "\u89c4\u5219A \u00b7 \u5168\u91cf\u62e6\u622a"
+    }
+
+    /// 拉目录（失败返回内置两条，保证有弹窗可用）
+    static func fetch(done: @escaping ([RuleSetInfo]) -> Void) {
+        var req = URLRequest(url: URL(string: "https://\(Srv.host):\(Srv.port)/a/sets")!)
+        req.httpMethod = "GET"
+        req.timeoutInterval = 15
+        req.setValue(Session.token, forHTTPHeaderField: "X-Token")
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+
+        Net.session.dataTask(with: req) { data, _, _ in
+            var list: [RuleSetInfo] = []
+            if let d = data,
+               let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+               let arr = o["sets"] as? [[String: Any]] {
+                for x in arr {
+                    var it = RuleSetInfo()
+                    it.id = (x["id"] as? Int) ?? Int((x["id"] as? Double) ?? 1)
+                    it.name = (x["name"] as? String) ?? ""
+                    it.desc = (x["desc"] as? String) ?? ""
+                    it.ready = (x["ready"] as? Bool) ?? false
+                    if !it.name.isEmpty { list.append(it) }
+                }
+            }
+            if list.isEmpty {
+                list = [RuleSetInfo(id: 1, name: "\u89c4\u5219A \u00b7 \u5168\u91cf\u62e6\u622a", desc: "\u6e38\u620f/\u5e7f\u544a/\u7edf\u8ba1 \u5168\u91cf\u62e6\u622a", ready: true),
+                        RuleSetInfo(id: 2, name: "\u89c4\u5219B \u00b7 \u5b89\u9759\u6a21\u5f0f", desc: "\u53ea\u62e6\u53cd\u4f5c\u5f0a\u3001\u516c\u544a\u5f39\u7a97", ready: true)]
+            }
+            DispatchQueue.main.async { done(list) }
+        }.resume()
+    }
+}
+
 enum CloudRules {
 
     // 派生密钥（由原生密钥派生；iOS 无 .so，直接内嵌派生值）
@@ -232,7 +290,7 @@ enum CloudRules {
         return mac.map { String(format: "%02x", $0) }.joined()
     }
 
-    static func fetch(done: @escaping (Bool, String, String) -> Void) {
+    static func fetch(set: Int = RuleSets.current, done: @escaping (Bool, String, String) -> Void) {
         let ts = Int64(Date().timeIntervalSince1970 * 1000)
         let nonce = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let dev = Dev.id
@@ -248,7 +306,7 @@ enum CloudRules {
         req.setValue(nonce, forHTTPHeaderField: "X-Nonce")
         req.setValue(sig(payload), forHTTPHeaderField: "X-Sig")
         req.httpBody = try? JSONSerialization.data(withJSONObject:
-            ["dev": dev, "km": km, "app": Srv.app, "ver": 1])
+            ["dev": dev, "km": km, "app": Srv.app, "ver": 1, "set": set])
 
         Net.session.dataTask(with: req) { data, resp, err in
             var ok = false, text = ""
