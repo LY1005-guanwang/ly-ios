@@ -579,68 +579,53 @@ final class RulesPage: BasePage {
         HUD.toast("拦截范围已更新，重开拦截生效")
     }
 
+    private var pendingSel: Set<Int> = []
+    private var setList: [RuleSetInfo] = []
+
     @objc private func onPickRuleSet() {
-
-
         RuleSets.fetch { list in
-
-
-            let sheet = UIAlertController(title: "\u{9009}\u{62e9}\u{89c4}\u{5219}\u{6a21}\u{5f0f}", message: nil, preferredStyle: .actionSheet)
-
-
-            for it in list {
-
-
-                let t = it.name + (it.desc.isEmpty ? "" : "\n" + it.desc)
-
-
-                let act = UIAlertAction(title: t, style: .default) { _ in
-
-
-                    RuleSets.current = it.id
-
-
-                    HUD.toast("\u{5df2}\u{5207}\u{6362}\u{5230} " + it.name)
-
-
-                    self.onSync()
-
-
-                }
-
-
-                sheet.addAction(act)
-
-
-            }
-
-
-            sheet.addAction(UIAlertAction(title: "\u{53d6}\u{6d88}", style: .cancel, handler: nil))
-
-
-            if let pop = sheet.popoverPresentationController {
-
-
-                pop.sourceView = self.modeB
-
-
-                pop.sourceRect = self.modeB.bounds
-
-
-            }
-
-
-            self.present(sheet, animated: true)
-
-
+            self.setList = list
+            self.pendingSel = RuleSets.currentList
+            self.presentPicker()
         }
-
-
     }
 
+    /// 多选弹窗：点一项切换勾选并重新弹出，最后「应用」保存并拉取
+    private func presentPicker() {
+        let title = "\u{9009}\u{62e9}\u{89c4}\u{5219}\u{6a21}\u{5f0f}\u{ff08}\u{53ef}\u{591a}\u{9009}\u{ff09}"
+        let sheet = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
 
+        for it in setList {
+            let on = pendingSel.contains(it.id)
+            let mark = on ? "\u{2713} " : "\u{25cb} "
+            let t = mark + it.name + (it.desc.isEmpty ? "" : "\n" + it.desc)
+            sheet.addAction(UIAlertAction(title: t, style: .default) { _ in
+                if self.pendingSel.contains(it.id) {
+                    if self.pendingSel.count > 1 { self.pendingSel.remove(it.id) }
+                } else {
+                    self.pendingSel.insert(it.id)
+                }
+                self.presentPicker()
+            })
+        }
 
-    @objc private func onSync() {
+        let apply = UIAlertAction(title: "\u{5e94}\u{7528}\u{ff08}\u{5df2}\u{9009} " + String(pendingSel.count) + "\uff09",
+                                  style: .default) { _ in
+            RuleSets.currentList = self.pendingSel
+            HUD.toast("\u{5df2}\u{9009}\u{62e9}\u{ff1a}" + RuleSets.listParam)
+            self.onSync()
+        }
+        sheet.addAction(apply)
+        sheet.addAction(UIAlertAction(title: "\u{53d6}\u{6d88}", style: .cancel, handler: nil))
+
+        if let pop = sheet.popoverPresentationController {
+            pop.sourceView = self.view
+            pop.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 1, height: 1)
+        }
+        self.present(sheet, animated: true)
+    }
+
+@objc private func onSync() {
         if !Session.logged {
             statusLB.text = "请先在「账号」页登录"
             diag.text = "规则接口需要账号凭证（X-Token）"
@@ -656,7 +641,7 @@ final class RulesPage: BasePage {
         syncB.isEnabled = false
         statusLB.text = "拉取中…"
         diag.text = ""
-        CloudRules.fetch { ok, text, d in
+        CloudRules.fetch(sets: RuleSets.listParam) { ok, text, d in
             self.syncB.isEnabled = true
             if ok {
                 RuleStore.save(text)
