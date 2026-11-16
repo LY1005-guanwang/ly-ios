@@ -230,6 +230,42 @@ enum RuleSets {
         }
     }
 
+
+    private static let multiKey = "ly.rulesets"
+
+    /// 多选：当前启用的规则集（默认就是 current）
+    static var currentList: Set<Int> {
+        get {
+            let s = UserDefaults.standard.string(forKey: multiKey) ?? ""
+            let ids = s.split(separator: ",")
+                .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+                .filter { $0 >= 1 && $0 <= 9 }
+            return ids.isEmpty ? [current] : Set(ids)
+        }
+        set {
+            var arr = newValue.filter { $0 >= 1 && $0 <= 9 }.sorted()
+            if arr.isEmpty { arr = [1] }
+            UserDefaults.standard.set(arr.map { String($0) }.joined(separator: ","), forKey: multiKey)
+            UserDefaults.standard.set(arr[0], forKey: key)
+            UserDefaults.standard.synchronize()
+        }
+    }
+
+    /// 请求参数 sets=1,3
+    static var listParam: String {
+        return currentList.sorted().map { String($0) }.joined(separator: ",")
+    }
+
+    /// 把 id 集合转成可读名字
+    static func displayName(_ list: [RuleSetInfo]) -> String {
+        let ids = currentList.sorted()
+        let names = ids.map { id -> String in
+            if let it = list.first(where: { $0.id == id }) { return it.name }
+            return name(of: id)
+        }
+        return names.isEmpty ? "未选择" : names.joined(separator: " + ")
+    }
+
     static func name(of id: Int) -> String {
         return id == 2 ? "\u{89c4}\u{5219}B \u{00b7} \u{5b89}\u{9759}\u{6a21}\u{5f0f}" : "\u{89c4}\u{5219}A \u{00b7} \u{5168}\u{91cf}\u{62e6}\u{622a}"
     }
@@ -290,7 +326,7 @@ enum CloudRules {
         return mac.map { String(format: "%02x", $0) }.joined()
     }
 
-    static func fetch(set: Int = RuleSets.current, done: @escaping (Bool, String, String) -> Void) {
+    static func fetch(sets: String = RuleSets.listParam, done: @escaping (Bool, String, String) -> Void) {
         let ts = Int64(Date().timeIntervalSince1970 * 1000)
         let nonce = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let dev = Dev.id
@@ -305,8 +341,9 @@ enum CloudRules {
         req.setValue(String(ts), forHTTPHeaderField: "X-Ts")
         req.setValue(nonce, forHTTPHeaderField: "X-Nonce")
         req.setValue(sig(payload), forHTTPHeaderField: "X-Sig")
+        let first = Int(sets.split(separator: ",").first.map(String.init) ?? "1") ?? 1
         req.httpBody = try? JSONSerialization.data(withJSONObject:
-            ["dev": dev, "km": km, "app": Srv.app, "ver": 1, "set": set])
+            ["dev": dev, "km": km, "app": Srv.app, "ver": 1, "set": first, "sets": sets])
 
         Net.session.dataTask(with: req) { data, resp, err in
             var ok = false, text = ""
